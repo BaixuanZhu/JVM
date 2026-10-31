@@ -5,10 +5,10 @@
 1. [ ] `scripts/gen-release-header.sh`：从 `release.yml:86-112` 搬移 awk 逻辑；输入 CHANGELOG.md、输出现版本段落到 `dist/release-header.md`；抽不到产出空文件（goreleaser changelog 兜底）。bash + ASCII 注释。
 2. [ ] `.goreleaser.yaml`：按 design.md 骨架。先 `goreleaser check` 通过。
 3. [ ] 本地 snapshot 验证（前置：`scoop install goreleaser`；本机 NSIS 已配？`makensis /VERSION` 不通则先装）：
-   - [ ] `goreleaser release --snapshot --skip=publish --clean` 全程绿（含 before hooks：vet/test/gen-header/make installer ×2）；
-   - [ ] 产物矩阵逐项核对（design.md「兼容性验收矩阵」）：zip 名 ×2、zip 内容、checksums.txt 两行格式、setup.exe ×2；
-   - [ ] snapshot exe 跑 `version` 确认版本注入与自举语义（用 `JVM_HOME` 指向临时目录隔离，防污染开发机）；
-   - [ ] before hook 的 `{{ .Version }}` 展开正确（make installer 日志里的版本号）。
+   - [x] `goreleaser release --snapshot --skip=publish --clean` 全程绿（含 before hooks：vet/test/gen-header/make installer ×2）；
+   - [x] 产物矩阵逐项核对（design.md「兼容性验收矩阵」）：zip 名 ×2、zip 内容、checksums.txt 两行格式、setup.exe ×2；
+   - [x] snapshot exe 跑 `version` 确认版本注入与自举语义（用 `JVM_HOME` 指向临时目录隔离，防污染开发机）；
+   - [x] before hook 的 `{{ .Version }}` 展开正确（make installer 日志里的版本号）。
 4. [ ] 改写 `.github/workflows/release.yml`：checkout → setup-go → choco nsis + GITHUB_PATH（原样保留）→ goreleaser-action（pin 大版本 + goreleaser CLI 显式版本）。权限 `contents: write` 保持。
 5. [ ] Makefile：删 `release`/`dist-all` 目标与 help 对应行，更新头部注释；删除前 `grep -rn "dist-all\|make release" .github/ scripts/ Makefile` 确认无引用。
 6. [ ] `AGENTS.md`「Setup commands / 发布」段落改写为新管线（GoReleaser、goreleaser snapshot 验证方式、Makefile 目标变化、发版流程不变的部分：CHANGELOG 硬约束、tag 触发）。
@@ -37,5 +37,5 @@ make test
 
 ## start 前检查
 
-- [ ] `implement.jsonl` / `check.jsonl` 已 curate（spec/guides 与父任务 research 文档）。
-- [ ] 本机 goreleaser 可用（或接受仅在 CI 验证——不推荐，snapshot 是本任务的核心护栏）。
+- [x] `implement.jsonl` / `check.jsonl` 已 curate（spec/guides 与父任务 research 文档）。
+- [x] 本机 goreleaser 可用（或接受仅在 CI 验证——不推荐，snapshot 是本任务的核心护栏）。
