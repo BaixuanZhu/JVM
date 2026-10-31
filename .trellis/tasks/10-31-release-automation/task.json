@@ -1,0 +1,30 @@
+{
+  "id": "release-automation",
+  "name": "release-automation",
+  "title": "发版自动化: GoReleaser 迁移与包管理器生态接入",
+  "description": "将发版管线从手写 Makefile+release.yml 迁移到 GoReleaser+GitHub Actions, 并接入 WinGet/Scoop 分发; 父任务统筹三个子任务的顺序与集成验收",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "zz",
+  "assignee": "zz",
+  "createdAt": "2026-10-31",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "10-31-goreleaser-migration",
+    "10-31-winget-automation",
+    "10-31-scoop-distribution"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}

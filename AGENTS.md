@@ -90,3 +90,24 @@ CI（`.github/workflows/ci.yml`）：push 到 main / PR 每次跑单元测试（
   - 历史污染清理：编辑 `$PROFILE` / `~/.bashrc` 删除指向开发路径的 `jvm` wrapper；检查注册表 `HKCU\Environment\PATH` 残留的开发/Temp 目录条目，清理后广播 `WM_SETTINGCHANGE`（或重新登录）。
 - 构建产物输出到 `dist/`（已在 `.gitignore`）；不要把二进制提交进仓库。
 - **版本目录命名无 arch 维度**：`~/.jvm/versions/` 目录名是 `{distro}-{ReleaseName}`（如 `temurin-21.0.5+11`），不含目标架构。同一台机器上先 `arch=x64` 再 `arch=aarch64` 装同一发行版同一版本会撞名（相同版本号 → 判定"已安装"跳过；不同 patch → 两个目录但 `use` 只匹配其一）。属已知限制：跨架构并存是极边缘场景，而目录名加 arch 会连锁影响 junction 匹配 / `MigrateLegacyDirs` / doctor，故不做。
+<!-- TRELLIS:START -->
+# Trellis Instructions
+
+These instructions are for AI assistants working in this project.
+
+This project is managed by Trellis. The working knowledge you need lives under `.trellis/`:
+
+- `.trellis/workflow.md` — development phases, when to create tasks, skill routing
+- `.trellis/spec/` — package- and layer-scoped coding guidelines (read before writing code in a given layer)
+- `.trellis/workspace/` — per-developer journals and session traces
+- `.trellis/tasks/` — active and archived tasks (PRDs, research, jsonl context)
+
+If a Trellis command is available on your platform (e.g. `/trellis:finish-work`, `/trellis:continue`), prefer it over manual steps. Not every platform exposes every command.
+
+If you're using Codex or another agent-capable tool, additional project-scoped helpers may live in:
+- `.agents/skills/` — reusable Trellis skills
+- `.codex/agents/` — optional custom subagents
+
+Managed by Trellis. Edits outside this block are preserved; edits inside may be overwritten by a future `trellis update`.
+
+<!-- TRELLIS:END -->

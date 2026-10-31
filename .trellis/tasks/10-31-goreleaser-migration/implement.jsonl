@@ -1,0 +1,2 @@
+{"file": ".trellis/tasks/10-31-release-automation/research/release-pipeline-facts.md", "reason": "GoReleaser 能力边界/生命周期顺序/资产契约矩阵——.goreleaser.yaml 设计依据"}
+{"file": ".trellis/tasks/10-31-release-automation/prd.md", "reason": "父任务 Background 持有资产名契约/_checksums 格式/三消费者等单一事实源，子 PRD 不重复"}

@@ -1,0 +1,2 @@
+{"file": ".trellis/tasks/10-31-release-automation/research/release-pipeline-facts.md", "reason": "验收矩阵断言依据（zip 名/checksums 两行/setup.exe ×2）"}
+{"file": ".trellis/tasks/10-31-release-automation/prd.md", "reason": "跨子任务验收标准与资产契约（兼容性裁判：upgrade.go/install.ps1 零改动的核对基准）"}
