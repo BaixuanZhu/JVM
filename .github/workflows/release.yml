@@ -1,9 +1,15 @@
-# 打 tag (v0.1.0) 时自动编译, 产出安装器 + 便携 zip, 发 GitHub Release
-# 产物 (amd64 / arm64 双架构, 单 job 顺序构建):
+# 打 tag (v0.1.0) 时经 GoReleaser 发版 (配置见 .goreleaser.yaml, 混合模式):
+#   goreleaser: 双架构编译 + 便携 zip + checksums.txt + GitHub Release 创建/上传
+#   Makefile:   NSIS 安装器 (goreleaser before hook 调 make installer x2,
+#               定制 jvm.nsi goreleaser 模板覆盖不了, 保留原产线)
+# 资产:
 #   jvm-windows-amd64-setup.exe   双击安装器 (给新用户)
 #   jvm-windows-arm64-setup.exe   ARM64 双击安装器 (stub 为 x86, 释放 ARM64 原生 jvm.exe)
 #   jvm-windows-amd64.zip         便携版 (供 jvm upgrade 精确匹配拉取)
 #   jvm-windows-arm64.zip         ARM64 便携版 (ARM64 版 jvm 自更新拉这个)
+#   checksums.txt                 GNU sha256sum 文本格式 (只含两个 zip, upgrade/install.ps1 消费)
+#   install.ps1                   一行安装脚本
+# 单测 gate 在 goreleaser before hooks (go vet + go test), 红则中止不发版。
 
 name: release
 
@@ -13,41 +19,27 @@ on:
       - 'v*'
 
 permissions:
-  contents: write  # softprops/action-gh-release 需要创建 release 和上传 asset
+  contents: write  # goreleaser 创建 release / 上传 asset; gh release edit 覆盖 body
 
 jobs:
-  build-and-release:
+  goreleaser:
     runs-on: windows-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          # 完整历史: goreleaser 需 tag 推导版本号与默认 changelog 的提交范围
+          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v7
         with:
           go-version: '1.26'
 
-      - name: go test (发版前单测 gate)
-        # 单测红 → job 失败 → Release 不发。发版是不可逆的 outward-facing 动作,
-        # 项目安全敏感 (下载二进制 + 改 PATH/注册表 + 自更新), 发版前确认单测全绿。
-        run: go test ./...
-
-      - name: Derive version from tag
-        id: ver
-        shell: bash
-        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-
-      - name: Build jvm.exe (amd64 + arm64)
-        # 双架构顺序构建, 产物分别落在 dist/amd64/ 与 dist/arm64/
-        # 用 build-dist (发行风味, 保持启动自举); make build 是开发构建, 自举关闭
-        run: |
-          make build-dist VERSION=${{ steps.ver.outputs.VERSION }} GOARCH=amd64
-          make build-dist VERSION=${{ steps.ver.outputs.VERSION }} GOARCH=arm64
-
       - name: Install NSIS
         shell: pwsh
         # choco 装 NSIS 到 C:\Program Files (x86)\NSIS, 但不会刷新当前 job 的 PATH,
-        # 所以下一步跑 makensis 会 "command not found"。
+        # 所以 goreleaser before hook 里跑 make installer 的 makensis 会 "command not found"。
         # NSIS 的 makensis.exe 直接在该目录下 (无版本子目录), 故直接写这个路径。
         run: |
           choco install nsis -y --no-progress
@@ -59,67 +51,34 @@ jobs:
           Write-Host "Added to GITHUB_PATH: $nsisDir"
 
       - name: Verify makensis
-        # 失败在这里会给出清晰错误, 而不是埋在 make 里
+        # 失败在这里会给出清晰错误, 而不是埋在 goreleaser before hook 里
         shell: pwsh
         run: makensis /VERSION
 
-      - name: Build installer (amd64 + arm64)
-        run: |
-          make installer VERSION=${{ steps.ver.outputs.VERSION }} GOARCH=amd64
-          make installer VERSION=${{ steps.ver.outputs.VERSION }} GOARCH=arm64
-
-      - name: Build portable zip (amd64 + arm64)
-        # windows-latest 自带 zip (来自 Git), make release 直接用
-        run: |
-          make release GOARCH=amd64
-          make release GOARCH=arm64
-
-      - name: Generate checksum
-        # 生成 GNU coreutils sha256sum 格式的 checksums.txt, 供 jvm upgrade 校验下载完整性
-        shell: bash
-        run: |
-          cd dist
-          sha256sum jvm-windows-amd64.zip jvm-windows-arm64.zip > checksums.txt
-          echo "--- checksums.txt ---"
-          cat checksums.txt
-
-      - name: Extract release notes from CHANGELOG.md
-        # 从 CHANGELOG.md 抽取当前 tag 对应版本段落作为 Release body;
-        # 抽不到 (格式不符或无此版本) 则回退让 action 自动生成。
-        id: notes
-        shell: bash
-        run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          echo "当前版本: $VERSION"
-          # awk: 找到 "## [$VERSION]" 开头段落, 输出到下一个 "## [" 之前
-          BODY=$(awk -v v="$VERSION" '
-            $0 ~ "^## \\[" v "\\]" {found=1; next}
-            found && /^## \[/ {exit}
-            found {print}
-          ' CHANGELOG.md)
-          if [ -n "$BODY" ]; then
-            {
-              echo "RELEASE_BODY<<EOF"
-              echo "$BODY"
-              echo "EOF"
-            } >> "$GITHUB_ENV"
-            echo "use_changelog=true" >> "$GITHUB_OUTPUT"
-            echo "--- 从 CHANGELOG.md 抽取的 release notes ---"
-            echo "$BODY"
-          else
-            echo "CHANGELOG.md 里未找到 [$VERSION] 段落, 回退自动生成"
-            echo "use_changelog=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Create GitHub Release and upload assets
-        uses: softprops/action-gh-release@v3
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
         with:
-          body: ${{ env.RELEASE_BODY }}
-          generate_release_notes: ${{ steps.notes.outputs.use_changelog != 'true' }}
-          files: |
-            dist/jvm-windows-amd64-setup.exe
-            dist/jvm-windows-arm64-setup.exe
-            dist/jvm-windows-amd64.zip
-            dist/jvm-windows-arm64.zip
-            dist/checksums.txt
-            install.ps1
+          distribution: goreleaser
+          # goreleaser CLI 版本显式固定 (与本地 snapshot 验证版本一致),
+          # 防止 latest 漂移破坏产线; 升级前先本地跑通 snapshot
+          version: v2.19.0
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Override release notes from CHANGELOG.md
+        # goreleaser OSS 版的 release.header 不支持从文件加载 (from_file 是 Pro
+        # 专属), 故 Release body 在这里覆盖: goreleaser before hook 里的
+        # scripts/gen-release-header.sh 已把 CHANGELOG.md 当前版本段落抽到
+        # dist/release-header.md。文件非空 -> 覆盖 body; 空 -> 保留 goreleaser
+        # 默认 changelog body (与旧管线 CHANGELOG 抽取/回退行为等价)。
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -s dist/release-header.md ]; then
+            echo "覆盖 Release body (CHANGELOG.md [$GITHUB_REF_NAME] 段落)"
+            gh release edit "$GITHUB_REF_NAME" --notes-file dist/release-header.md
+          else
+            echo "CHANGELOG.md 未抽取到段落, 保留 goreleaser 默认 changelog body"
+          fi

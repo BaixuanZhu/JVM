@@ -9,6 +9,14 @@
 
 ### 变更
 
+- 发版管线迁移 [GoReleaser](https://goreleaser.com)（混合模式：NSIS 安装器保留
+  Makefile 经 before hook 产出，定制 `.nsi` 逻辑不变）：tag 触发后由 goreleaser
+  统一跑单测 gate、编译双架构、打便携 zip、生成 checksums.txt、抽取 CHANGELOG
+  版本段落为 Release body 并上传全部资产。资产命名、zip 内容（单个 `jvm.exe`）
+  与 checksums.txt 格式与旧管线完全一致，`jvm upgrade` / `install.ps1` 等存量
+  消费者零感知。Makefile 移除 `release` / `dist-all` 目标（职责被接管），
+  `make build` / `build-dist` / `installer` 保留。
+
 - GitHub 仓库名 `jvm` → `JVM`（纯大小写改名，旧链接经 GitHub 重定向继续可用）；
   仓库描述与 topics 同步更新。
 

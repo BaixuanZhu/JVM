@@ -36,7 +36,9 @@ build:
 	@echo "[ok]   $(TARGET)"
 	@ls -lh $(TARGET) | awk '{print "       size:", $$5}'
 
-# ---- 构建 (发行风味: 保持启动自举, 供 installer/release 打包与 CI 使用) ----
+# ---- 构建 (发行风味: 保持启动自举, 供 installer 打包与本地手动发行编译) ----
+# 发版产线已由 GoReleaser 接管 (.goreleaser.yaml, 含自己的双架构编译),
+# 此目标只服务 make installer 与本地手动编译。
 .PHONY: build-dist
 build-dist:
 	@echo "[build-dist] $(TARGET) (v$(VERSION), windows/$(GOARCH))..."
@@ -51,10 +53,11 @@ run: build
 	./$(TARGET) $(ARGS)
 
 # ---- 清理 ----
+# 同时清 Makefile 的 dist/ 与 GoReleaser 的 release-dist/ (见 .goreleaser.yaml)
 .PHONY: clean
 clean:
-	@rm -rf $(DIST)
-	@echo "[clean] removed $(DIST)/"
+	@rm -rf $(DIST) release-dist
+	@echo "[clean] removed $(DIST)/ and release-dist/"
 
 # ---- 依赖管理 ----
 .PHONY: tidy
@@ -89,20 +92,10 @@ installer: build-dist
 	makensis /DAPP_VERSION=$(VERSION) /DAPP_ARCH=$(GOARCH) installer/jvm.nsi
 	@echo "[ok]   $(DIST)/$(BINARY)-windows-$(GOARCH)-setup.exe"
 
-# ---- 发 release 时用: 生成便携 zip ----
-# 产物 dist/jvm-windows-$(GOARCH).zip (内含单个 jvm.exe, 供 jvm upgrade 精确匹配拉取)
-# 用 PowerShell Compress-Archive, 不依赖 zip 命令 (Windows / CI 都自带 PowerShell)
-.PHONY: release
-release: build-dist
-	@powershell -NoProfile -Command "Compress-Archive -Path $(DIST)\$(GOARCH)\$(BINARY).exe -DestinationPath $(DIST)\$(BINARY)-windows-$(GOARCH).zip -Force"
-	@echo "[release] $(DIST)/$(BINARY)-windows-$(GOARCH).zip"
-	@echo "          上传到 GitHub Release (tag: v$(VERSION)) 后即可用 jvm upgrade 自更新"
-
-# ---- 一键产出全部发行资产 (安装器 + 便携 zip, 仅当前 GOARCH) ----
-# 双架构发行资产由 CI 分别用 GOARCH=amd64 / GOARCH=arm64 各跑一遍产出。
-.PHONY: dist-all
-dist-all: installer release
-	@echo "[dist-all] both assets ready under $(DIST)/ (windows/$(GOARCH))"
+# ---- 发 release 时用: 生成便携 zip (已移除) ----
+# 便携 zip / checksums / GitHub Release 发布由 GoReleaser 接管 (.goreleaser.yaml,
+# CI 见 .github/workflows/release.yml); 本地 snapshot 验证:
+#   goreleaser release --snapshot --skip=publish --clean
 
 # ---- 帮助 ----
 .PHONY: help
@@ -112,9 +105,8 @@ help:
 	@echo "  make build-dist               release-flavor build (bootstrap on)"
 	@echo "  make run ARGS=\"version\"        dev build and run (GOARCH=arm64 交叉编 ARM64)"
 	@echo "  make installer                build NSIS setup -> $(DIST)/$(BINARY)-windows-<arch>-setup.exe"
-	@echo "  make release                  build portable zip -> $(DIST)/$(BINARY)-windows-<arch>.zip"
-	@echo "  make dist-all                 build both release assets (current GOARCH)"
-	@echo "  make clean                    remove $(DIST)/"
+	@echo "  (发版产线: goreleaser release, 见 .goreleaser.yaml)"
+	@echo "  make clean                    remove $(DIST)/ and release-dist/"
 	@echo "  make tidy                     go mod tidy"
 	@echo "  make fmt                      format code"
 	@echo "  make vet                      static check"

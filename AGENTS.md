@@ -8,21 +8,20 @@
 
 需 Go 1.26+ 与 GNU Make（Git Bash / MinGW / WSL 自带）。
 
-- Build: `make build` → `dist/<arch>/jvm.exe`（`-trimpath -ldflags "-s -w"`；`GOARCH` 默认取本机 `go env GOARCH`，交叉编 ARM64 用 `make build GOARCH=arm64`）。**开发构建注入 `Bootstrap=off`，产物启动不做静默自举**；发行风味用 `make build-dist`（`installer`/`release`/`dist-all` 自动走它）
+- Build: `make build` → `dist/<arch>/jvm.exe`（`-trimpath -ldflags "-s -w"`；`GOARCH` 默认取本机 `go env GOARCH`，交叉编 ARM64 用 `make build GOARCH=arm64`）。**开发构建注入 `Bootstrap=off`，产物启动不做静默自举**；发行风味用 `make build-dist`（`installer` 自动走它；发版编译由 GoReleaser 自带，见下）
 - Run: `make run ARGS="version"`（先 dev build 再运行，不污染环境）
 - Format / 静态检查: `make fmt` / `make vet`（即 `go fmt ./...` / `go vet ./...`）
 - 测试: `make test`（即 `go test ./...`）；竞态检测 `make test-race`（`go test -race ./...`）
 - Deps: `make tidy`
 - 安装包: `make installer` → `dist/jvm-windows-<arch>-setup.exe`（需 NSIS：`scoop install nsis` 或 `choco install nsis`）
-- 便携 zip: `make release` → `dist/jvm-windows-<arch>.zip`（供 `jvm upgrade` 拉取）
-- 全部发行资产: `make dist-all`（仅当前 `GOARCH`；双架构由 CI 分别传 `GOARCH=amd64/arm64` 各跑一遍）
-- Clean: `make clean`
+- 发版产线: GoReleaser（`.goreleaser.yaml`，混合模式——goreleaser 管编译/zip/checksums/Release，NSIS 留 Makefile 经 before hook 产出后走 `release.extra_files` 上传）。本地 snapshot 验证：`goreleaser release --snapshot --skip=publish --clean`（产物在 `release-dist/`：zip ×2 + checksums.txt；`dist/`：setup.exe ×2）
+- Clean: `make clean`（清 `dist/` 与 `release-dist/`）
 
-发布：打 tag（`git tag v0.1.0 && git push --tags`）触发 `.github/workflows/release.yml`，在 windows-latest **先跑单测 gate（红则中止发版）** 再自动编译（amd64 + arm64 双架构）、打安装器 + 便携 zip 并发 GitHub Release（四 asset + checksums.txt）。ARM64 安装器 stub 为 x86，在 ARM64 Windows 上靠系统内置模拟运行，释放出的 jvm.exe 是 ARM64 原生。（曾有发版后自动提交 winget manifest PR 的 job，因暂不发布 winget 已移除；将来要上 winget 可从 git 历史的 release.yml 找回。）
+发布：打 tag（`git tag v0.1.0 && git push --tags`）触发 `.github/workflows/release.yml`，在 windows-latest 装 NSIS 后由 goreleaser-action（CLI 版本显式 pin）跑 `goreleaser release --clean`：before hooks 里 **先跑单测 gate（`go vet` + `go test`，红则中止不发版）**，再经 `scripts/gen-release-header.sh` 从 CHANGELOG.md 抽版本段落、`make installer` ×2 打安装器；随后 goreleaser 编译 amd64 + arm64 双架构、打便携 zip、生成 checksums.txt 并发 GitHub Release（zip ×2 + setup.exe ×2 + checksums.txt + install.ps1）。Release body 在 CI 末步用 `gh release edit --notes-file dist/release-header.md` 覆盖为 CHANGELOG 段落（抽不到则保留 goreleaser 默认 changelog）。版本注入：`{{ .Version }}` 与 Makefile `git describe` 语义一致（去 `v` 的 tag），goreleaser 只注入 `Version` 不注入 `Bootstrap`，等价 build-dist 自举语义。输出目录解耦：goreleaser 独占 `release-dist/`（hooks 之后要求该目录为空，故 Makefile/jvm.nsi 仍写 `dist/`）。ARM64 安装器 stub 为 x86，在 ARM64 Windows 上靠系统内置模拟运行，释放出的 jvm.exe 是 ARM64 原生。升级 goreleaser CLI 前先本地跑通 snapshot 再改 workflow 里的 `version:`。
 
 CI（`.github/workflows/ci.yml`）：push 到 main / PR 每次跑单元测试（`go vet` + `go test` + `go test -race` + `go build`，windows-latest）；真实集成测试（`scripts/integration-test.sh`，跑全 5 发行版的 install/use/list/doctor/uninstall + ARM64 下载链路 + `jvm pin` + `jvm available`（各 provider 的 Available 端点）+ `jvm outdated` + `jvm update`（旧 patch 升级 → 自动切换 → 清理旧目录 + 已是最新幂等）+ `jvm home` + `jvm exec`（bin 内解析 / 退出码传播 / 批处理分发 / 无参读 `.jvmrc` / 未装版本 fail-fast）+ 裸 `jvm use` 读 `.jvmrc` + `use --auto` 状态机（切换 / 恢复 / 未装警告 / 显式 use 清基线后离开静默 / `JVM_AUTOSWITCH=0` 禁用静默）+ rc 生态兼容（`.sdkmanrc` 裸 use / `.tool-versions` 驱动 exec / `.java-version` 半截版本降级切换 / 同层 `.jvmrc` 优先）+ uninstall 增强（删在用版本自动回退 / `--all` 批量删组 + 回退 / 组空与完整版本号负向）+ `doctor --fix` junction 重建与注册表 PATH 残留清理闭环（造假旧 JDK 条目 → 检出 → 删除 → 验证不误删 current/bin）+ 负向用例（未知 distro / use 未装版本 / exec 未装版本 / uninstall 不存在）+ `jvm upgrade` 端到端）仅每周 schedule + 手动 `workflow_dispatch` 触发（下载 ~1GB JDK，重）。集成 job 用 `JVM_HOME` 指向 runner 临时目录隔离文件副作用、`JVM_NO_BOOTSTRAP=1` 关自举（`use` 仍写一次性 runner 的注册表，可接受）。本地手跑集成脚本前注意：`use` 会改本机注册表 JAVA_HOME/PATH、残留清理用例会临时改用户 PATH。**集成脚本在 Git Bash 下跑，传给 jvm.exe 的 `/c` 等 flag 必须写 `//c`（MSYS 会把单个 `/c` 转成 `C:\`），删 junction 用 `cmd //c rmdir`（`rm` 会穿透 junction 删目标内容）**。
 
-**发版前必须更新 `CHANGELOG.md`**：在 `## [Unreleased]` 下方新增 `## [<版本号>] - <YYYY-MM-DD>` 段落，按 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 分类（新增/变更/修复/移除）。CI 的 release workflow 用 awk 从该段落抽取 Release body（抽不到则 Release 页面无说明），漏写会导致 GitHub Release 页面信息缺失。文档/纯测试/重构等非用户可见变更不必记。
+**发版前必须更新 `CHANGELOG.md`**：在 `## [Unreleased]` 下方新增 `## [<版本号>] - <YYYY-MM-DD>` 段落，按 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 分类（新增/变更/修复/移除）。release workflow 的 goreleaser before hook（`scripts/gen-release-header.sh`，awk 逻辑）从该段落抽取 Release body，CI 末步覆盖到 Release 页面（抽不到则回退 goreleaser 默认 changelog），漏写会导致 GitHub Release 页面说明缺失。文档/纯测试/重构等非用户可见变更不必记。
 
 ## Code style
 
@@ -88,7 +87,7 @@ CI（`.github/workflows/ci.yml`）：push 到 main / PR 每次跑单元测试（
 - `jvm` 启动自举（把自身目录加入用户 PATH + 补全 shell 集成，幂等）**默认仅发行构建执行**。三层关闭机制（见 `internal/app/bootstrap.go` 的 `BootstrapEnabled`）：`make build`/`make run` 的开发产物经 ldflags 注入 `Bootstrap=off`；`JVM_NO_BOOTSTRAP` 环境变量非空；自身 exe 位于系统 Temp 目录（覆盖 `go run` 的 `Temp\go-build*\b001\exe` 临时二进制）。`make build-dist`/`installer`/`release` 产物与直接 `go build` 源码的二进制保持自举。
   - 开发调试放心跑 `./dist/<arch>/jvm.exe ...`，不会污染全局 `jvm`。
   - 历史污染清理：编辑 `$PROFILE` / `~/.bashrc` 删除指向开发路径的 `jvm` wrapper；检查注册表 `HKCU\Environment\PATH` 残留的开发/Temp 目录条目，清理后广播 `WM_SETTINGCHANGE`（或重新登录）。
-- 构建产物输出到 `dist/`（已在 `.gitignore`）；不要把二进制提交进仓库。
+- 构建产物输出到 `dist/`（Makefile/jvm.nsi，含 NSIS setup.exe 与 release-header.md）与 `release-dist/`（GoReleaser，均在 `.gitignore`）；不要把二进制提交进仓库。
 - **版本目录命名无 arch 维度**：`~/.jvm/versions/` 目录名是 `{distro}-{ReleaseName}`（如 `temurin-21.0.5+11`），不含目标架构。同一台机器上先 `arch=x64` 再 `arch=aarch64` 装同一发行版同一版本会撞名（相同版本号 → 判定"已安装"跳过；不同 patch → 两个目录但 `use` 只匹配其一）。属已知限制：跨架构并存是极边缘场景，而目录名加 arch 会连锁影响 junction 匹配 / `MigrateLegacyDirs` / doctor，故不做。
 <!-- TRELLIS:START -->
 # Trellis Instructions

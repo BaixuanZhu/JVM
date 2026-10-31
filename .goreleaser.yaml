@@ -1,0 +1,104 @@
+# GoReleaser 发版配置 (混合模式)
+#
+# 职责分工:
+#   - goreleaser: 单测 gate (before hooks 里 go vet / go test, 红则中止发版)、
+#     双架构编译 (amd64/arm64)、便携 zip、checksums.txt、GitHub Release 创建
+#     与资产上传。
+#   - Makefile:   NSIS 安装器 (installer/jvm.nsi 的定制逻辑 -- MUI2 组件页 /
+#     SecConfig 自举 / 卸载询问删用户数据 / InstallDirRegKey / HKCU Uninstall
+#     条目 -- goreleaser 自带的 NSIS 模板覆盖不了, 故保留)。经 before hook
+#     `make installer` 产出 setup.exe x2, 再由 release.extra_files 收集上传,
+#     与 goreleaser 产物完全解耦 (setup.exe 内的 exe 是 make 自行编译的,
+#     与 zip 内 exe 版本号同源注入, 编译次数与旧管线持平)。
+#
+# 输出目录 (dist: release-dist):
+#   goreleaser 独占 release-dist/, Makefile/jvm.nsi 继续按旧约定写 dist/
+#   (jvm.nsi 内硬编码 ..\dist\ 路径, 不改它)。两目录解耦的原因: goreleaser
+#   在 before hooks 之后要求自己的 dist 目录为空, 若 hooks 往同一个 dist/
+#   写 setup.exe 会报 "dist is not empty" 而中止。
+#   - dist/          make installer 产物 (setup.exe x2 + 中间 exe) +
+#                    release-header.md (CHANGELOG 抽取的 release body)
+#   - release-dist/  goreleaser 产物 (zip x2 / checksums.txt / 构建中间物)
+#
+# Release body:
+#   goreleaser OSS 版的 release.header 不支持从文件加载 (from_file 是 Pro
+#   专属), 故 body 机制为: before hook 的 gen-release-header.sh 把 CHANGELOG
+#   版本段落抽到 dist/release-header.md, CI 在 goreleaser 之后用
+#   `gh release edit --notes-file` 覆盖 (文件为空则不覆盖, 保留 goreleaser
+#   默认 changelog) -- 与旧管线 CHANGELOG 抽取/回退行为等价。
+#
+# 本地验证 (不发布):
+#   goreleaser release --snapshot --skip=publish --clean
+#   产物核对: release-dist/ 下 jvm-windows-{amd64,arm64}.zip (内含单
+#   jvm.exe) 与 checksums.txt (恰好两行); dist/ 下 setup.exe x2。
+#
+# 资产名契约 (不可破坏, 三个存量消费者):
+#   jvm-windows-{amd64,arm64}.zip  <- internal/upgrade/upgrade.go 精确名匹配,
+#                                     install.ps1 走 releases/latest/download/
+#   checksums.txt                  <- upgrade.go parseChecksum / install.ps1
+#                                     Get-ExpectedChecksum 逐行按文件名匹配
+#   注: extra_files (setup.exe x2 / install.ps1) 默认不进 checksums, 维持
+#   旧管线现状 (checksums.txt 只含两个 zip)。
+
+version: 2
+
+project_name: jvm
+
+dist: release-dist
+
+before:
+  hooks:
+    # 单测 gate: 发版是不可逆动作, vet/test 红则中止, 不建 Release
+    - go vet ./...
+    - go test ./...
+    # CHANGELOG.md -> dist/release-header.md (抽不到段落产出空文件,
+    # CI 侧据此回退 goreleaser 默认 changelog)
+    - bash scripts/gen-release-header.sh {{ .Version }}
+    # NSIS 安装器 x2 (混合模式: 定制 .nsi 留 Makefile)。写 dist/ (见上),
+    # 与 goreleaser 的 release-dist/ 互不干扰
+    - make installer VERSION={{ .Version }} GOARCH=amd64
+    - make installer VERSION={{ .Version }} GOARCH=arm64
+
+builds:
+  - id: jvm
+    main: .
+    binary: jvm
+    goos:
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    # 与 Makefile build-dist 语义一致: 只注入 Version, 不注入 Bootstrap
+    # (发行风味保持启动自举)
+    ldflags:
+      - -s
+      - -w
+      - -X jvm/internal/app.Version={{ .Version }}
+
+archives:
+  - id: portable
+    ids:
+      - jvm
+    formats:
+      - zip
+    # {{ .Arch }} 原样输出 amd64 / arm64 (v2 已移除 replacements 机制),
+    # 满足 upgrade.go / install.ps1 的精确资产名契约
+    name_template: "jvm-windows-{{ .Arch }}"
+    # zip 内只放单个 jvm.exe, 与旧管线 Compress-Archive 产物结构一致
+    # (files 留空会默认打包 license/readme/changelog, "none*" 是文档记载的
+    # 空 glob 写法, 什么都不匹配)
+    files:
+      - none*
+
+checksum:
+  # 必须叫 checksums.txt (goreleaser 默认 <project>_checksums.txt 会被
+  # upgrade.go / install.ps1 找不到); 只含 archives 产物 (两个 zip)
+  name_template: "checksums.txt"
+
+release:
+  extra_files:
+    - glob: dist/jvm-windows-amd64-setup.exe
+    - glob: dist/jvm-windows-arm64-setup.exe
+    - glob: install.ps1
