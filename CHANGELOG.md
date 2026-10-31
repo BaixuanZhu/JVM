@@ -7,6 +7,11 @@
 
 ## [Unreleased]
 
+### 变更
+
+- GitHub 仓库名 `jvm` → `JVM`（纯大小写改名，旧链接经 GitHub 重定向继续可用）；
+  仓库描述与 topics 同步更新。
+
 ### 新增
 
 - Tab 补全跟上 v0.15.0 的新 flag（补全块 v8，升级 jvm 后自动刷新）：

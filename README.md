@@ -1,6 +1,6 @@
 # jvm — Windows 上的 Java 版本管理器
 
-> 🌐 **官网**：<https://baixuanzhu.github.io/jvm/>
+> 🌐 **官网**：<https://baixuanzhu.github.io/JVM/>
 
 一个类似 nvm-windows / jabba 的 JDK 版本管理工具，专为 Windows 设计。
 支持 **Temurin / Corretto / Microsoft / Azul Zulu / BellSoft Liberica / Oracle GraalVM** 等多个发行版（另有 Temurin 早期访问变体 `temurin-ea`，跟踪尚未 GA 的预览版），提供双击安装包，无需管理员权限。
@@ -33,7 +33,7 @@
 PowerShell 里执行一行命令即可（无需管理员权限）：
 
 ```powershell
-iwr -useb "https://raw.githubusercontent.com/BaixuanZhu/jvm/main/install.ps1" | iex
+iwr -useb "https://raw.githubusercontent.com/BaixuanZhu/JVM/main/install.ps1" | iex
 ```
 
 脚本会自动下载最新 Release、校验 SHA256、解压到 `%LOCALAPPDATA%\Programs\jvm`，并运行一次 jvm 完成自举（注册用户 PATH + 注入 shell 集成）。装完**重开一次终端**即可使用。
@@ -41,7 +41,7 @@ iwr -useb "https://raw.githubusercontent.com/BaixuanZhu/jvm/main/install.ps1" | 
 想自定义安装目录，把脚本下到本地再传参：
 
 ```powershell
-iwr -useb "https://raw.githubusercontent.com/BaixuanZhu/jvm/main/install.ps1" -OutFile install.ps1
+iwr -useb "https://raw.githubusercontent.com/BaixuanZhu/JVM/main/install.ps1" -OutFile install.ps1
 .\install.ps1 -InstallDir "D:\tools\jvm"
 ```
 
@@ -49,7 +49,7 @@ iwr -useb "https://raw.githubusercontent.com/BaixuanZhu/jvm/main/install.ps1" -O
 
 ### 方式一：安装包
 
-从 [Releases](https://github.com/BaixuanZhu/jvm/releases) 按设备架构下载安装器（x64 设备用 `jvm-windows-amd64-setup.exe`，ARM64 设备用 `jvm-windows-arm64-setup.exe`），双击安装。安装器会：
+从 [Releases](https://github.com/BaixuanZhu/JVM/releases) 按设备架构下载安装器（x64 设备用 `jvm-windows-amd64-setup.exe`，ARM64 设备用 `jvm-windows-arm64-setup.exe`），双击安装。安装器会：
 
 1. 把 `jvm.exe` 放到 `%LOCALAPPDATA%\Programs\jvm`（用户级，无需管理员）
 2. 运行一次 jvm，自动配置 PATH 和 shell 集成
@@ -294,7 +294,7 @@ jvm install 21
 
 2. `internal/upgrade/upgrade.go` 里的常量已设为本仓库：
    ```go
-   const githubRepo = "BaixuanZhu/jvm"
+   const githubRepo = "BaixuanZhu/JVM"
    ```
 
 3. 重新编译，即可用 `jvm upgrade` 检查并更新。

@@ -29,7 +29,7 @@ import (
 
 // githubRepo 是发布 jvm 的 GitHub 仓库 (owner/repo 格式)。
 // 建好仓库后改成你自己的; 未配置 (占位值) 时 Run 会给出提示。
-const githubRepo = "BaixuanZhu/jvm"
+const githubRepo = "BaixuanZhu/JVM"
 
 // githubRelease 对应 GitHub API releases/latest 的响应 (只取需要的字段)
 type githubRelease struct {

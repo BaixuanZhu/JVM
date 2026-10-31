@@ -24,7 +24,7 @@ import (
 
 // githubRepo 是发布 jvm 的 GitHub 仓库 (owner/repo)。
 // 与 internal/upgrade 的 githubRepo 保持一致; 此处独立声明, 避免跨包依赖。
-const githubRepo = "BaixuanZhu/jvm"
+const githubRepo = "BaixuanZhu/JVM"
 
 // checkInterval 是两次更新检查之间的最小间隔 (24 小时)。
 const checkInterval = 24 * time.Hour

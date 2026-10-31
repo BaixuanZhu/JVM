@@ -76,7 +76,7 @@ Section "jvm executable (required)" SecCore
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\jvm" "DisplayName" "jvm - Java version manager"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\jvm" "DisplayVersion" "${APP_VERSION}"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\jvm" "Publisher" "BaixuanZhu"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\jvm" "URLInfoAbout" "https://github.com/BaixuanZhu/jvm"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\jvm" "URLInfoAbout" "https://github.com/BaixuanZhu/JVM"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\jvm" "InstallLocation" "$INSTDIR"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\jvm" "UninstallString" '"$INSTDIR\uninstall.exe"'
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\jvm" "QuietUninstallString" '"$INSTDIR\uninstall.exe" /S'

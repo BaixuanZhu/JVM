@@ -15,7 +15,7 @@
 
     Usage:
       One-line install (all defaults):
-        iwr -useb "https://raw.githubusercontent.com/BaixuanZhu/jvm/main/install.ps1" | iex
+        iwr -useb "https://raw.githubusercontent.com/BaixuanZhu/JVM/main/install.ps1" | iex
       Local with params:
         .\install.ps1 -InstallDir "D:\tools\jvm"
 
@@ -105,7 +105,7 @@ try {
     }
 
     # ---- 2. Resolve download source ------------------------------------------
-    $base = if ($env:JVM_INSTALLER_MIRROR) { $env:JVM_INSTALLER_MIRROR.TrimEnd('/') + '/' } else { 'https://github.com/BaixuanZhu/jvm/releases/latest/download/' }
+    $base = if ($env:JVM_INSTALLER_MIRROR) { $env:JVM_INSTALLER_MIRROR.TrimEnd('/') + '/' } else { 'https://github.com/BaixuanZhu/JVM/releases/latest/download/' }
     $zipName = "jvm-windows-$assetArch.zip"
     $checksumName = 'checksums.txt'
     $zipUrl = $base + $zipName
