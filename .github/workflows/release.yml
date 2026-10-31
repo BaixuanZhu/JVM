@@ -17,6 +17,10 @@ on:
   push:
     tags:
       - 'v*'
+  # 手动触发 = 管线演练: 全链路跑 before hooks (vet/test/gen-header/make installer x2)
+  # + goreleaser snapshot, 但 --snapshot --skip=publish 不建 Release 不上传资产,
+  # 用于不打 tag 验证发版管线 (真实发版仍只能走 tag 触发)。
+  workflow_dispatch:
 
 permissions:
   contents: write  # goreleaser 创建 release / 上传 asset; gh release edit 覆盖 body
@@ -62,11 +66,15 @@ jobs:
           # goreleaser CLI 版本显式固定 (与本地 snapshot 验证版本一致),
           # 防止 latest 漂移破坏产线; 升级前先本地跑通 snapshot
           version: v2.19.0
-          args: release --clean
+          # tag 触发 = 真实发版; 手动触发 = 演练 (snapshot 不发布, 见文件头注释)
+          args: >-
+            release --clean
+            ${{ github.event_name == 'workflow_dispatch' && '--snapshot --skip=publish' || '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Override release notes from CHANGELOG.md
+        if: github.event_name == 'push'
         # goreleaser OSS 版的 release.header 不支持从文件加载 (from_file 是 Pro
         # 专属), 故 Release body 在这里覆盖: goreleaser before hook 里的
         # scripts/gen-release-header.sh 已把 CHANGELOG.md 当前版本段落抽到
