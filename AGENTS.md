@@ -2,7 +2,7 @@
 
 ## Project overview
 
-`jvm-site` 是 [jvm](https://github.com/BaixuanZhu/jvm)（Windows 上的 Java 版本管理器）的**官网**，部署在 GitHub Pages：<https://baixuanzhu.github.io/jvm/>。本目录是该仓库 `gh-pages` 分支的 **git worktree**——主仓库在 `D:\code\jvm`（`main` 分支是 Go 工具本体），两个 worktree 各管各的分支。
+`jvm-site` 是 [jvm](https://github.com/BaixuanZhu/JVM)（Windows 上的 Java 版本管理器）的**官网**，部署在 GitHub Pages：<https://baixuanzhu.github.io/JVM/>。本目录是该仓库 `gh-pages` 分支的 **git worktree**——主仓库在 `D:\code\jvm`（`main` 分支是 Go 工具本体），两个 worktree 各管各的分支。
 
 纯静态站点，用 **GitHub Pages 原生 Jekyll** 构建（无主题、自定义布局），无前端框架、无打包步骤。内容是面向用户的中文文档：首页（Hero + 特性 + 发行版卡片）、安装 / 命令 / 发行版 / 配置 / FAQ 五个文档页、更新日志。
 
@@ -31,7 +31,7 @@ jekyll serve --baseurl /jvm      # 访问 http://127.0.0.1:4000/jvm/
 
 无自动化测试，全靠人工 / 抓取验证：
 
-1. **构建状态**：`gh api repos/BaixuanZhu/jvm/pages/builds/latest --jq .status`（`built` 即成功；失败时 `.error.message` 给原因，多为 Liquid 语法 / front matter 错误）。
+1. **构建状态**：`gh api repos/BaixuanZhu/JVM/pages/builds/latest --jq .status`（`built` 即成功；失败时 `.error.message` 给原因，多为 Liquid 语法 / front matter 错误）。
 2. **线上内容**：push 后用 WebFetch 抓对应 URL 核对关键文案（标题、表格行、示例命令）。
 3. **本地预览**：`jekyll serve` 后走查页面布局与移动端导航。
 

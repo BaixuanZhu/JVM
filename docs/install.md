@@ -10,7 +10,7 @@ description: jvm 的三种安装方式：一键脚本、安装包、便携版，
 PowerShell 里执行一行命令：
 
 ```powershell
-iwr -useb "https://raw.githubusercontent.com/BaixuanZhu/jvm/main/install.ps1" | iex
+iwr -useb "https://raw.githubusercontent.com/BaixuanZhu/JVM/main/install.ps1" | iex
 ```
 
 脚本会**自动检测系统架构（x64 / ARM64）**、下载匹配的最新 Release、校验 SHA256、解压到 `%LOCALAPPDATA%\Programs\jvm`，并运行一次 jvm 完成自举（注册用户 PATH + 注入 shell 集成）。装完**重开一次终端**即可使用。
@@ -18,7 +18,7 @@ iwr -useb "https://raw.githubusercontent.com/BaixuanZhu/jvm/main/install.ps1" | 
 想自定义安装目录，把脚本下到本地再传参：
 
 ```powershell
-iwr -useb "https://raw.githubusercontent.com/BaixuanZhu/jvm/main/install.ps1" -OutFile install.ps1
+iwr -useb "https://raw.githubusercontent.com/BaixuanZhu/JVM/main/install.ps1" -OutFile install.ps1
 .\install.ps1 -InstallDir "D:\tools\jvm"
 ```
 

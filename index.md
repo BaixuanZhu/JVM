@@ -15,7 +15,7 @@ title: 首页
       </p>
 
       <div class="install-cmd">
-        <code id="hero-install-cmd">iwr -useb "https://raw.githubusercontent.com/BaixuanZhu/jvm/main/install.ps1" | iex</code>
+        <code id="hero-install-cmd">iwr -useb "https://raw.githubusercontent.com/BaixuanZhu/JVM/main/install.ps1" | iex</code>
         <button class="copy-btn" data-copy="#hero-install-cmd">复制</button>
       </div>
 
