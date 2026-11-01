@@ -5,7 +5,7 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
-## [Unreleased]
+## [0.16.0] - 2026-11-01
 
 ### 变更
 
@@ -427,7 +427,8 @@
 - SHA256 校验、zip-slip 防护、原子解压。
 - NSIS 安装包 + GitHub Actions 自动发布。
 
-[Unreleased]: https://github.com/BaixuanZhu/jvm/compare/v0.14.0...HEAD
+[Unreleased]: https://github.com/BaixuanZhu/JVM/compare/v0.16.0...HEAD
+[0.16.0]: https://github.com/BaixuanZhu/JVM/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/BaixuanZhu/jvm/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/BaixuanZhu/jvm/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/BaixuanZhu/jvm/compare/v0.12.0...v0.13.0
