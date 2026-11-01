@@ -60,7 +60,9 @@ jobs:
         run: makensis /VERSION
 
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
+        # @v7: Node 24 runtime (v6 已被 GH 弃用警告), 输入不变;
+        # v7.1+ 附带 goreleaser 二进制自身的 checksum/cosign 校验
+        uses: goreleaser/goreleaser-action@v7
         with:
           distribution: goreleaser
           # goreleaser CLI 版本显式固定 (与本地 snapshot 验证版本一致),
