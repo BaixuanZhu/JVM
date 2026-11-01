@@ -28,7 +28,7 @@
 - `release.header` from-file loading (`from_file`) is **Pro-only**; OSS writes the path literally. Release body = CI post-step `gh release edit "$GITHUB_REF_NAME" --notes-file dist/release-header.md`, only when the file is non-empty (empty → keep goreleaser default changelog).
 - `archives.files: [none*]` is the documented empty-glob trick to produce a zip containing ONLY `jvm.exe` (default glob pulls LICENSE/README/CHANGELOG in).
 - checksum file name must be forced: `checksum.name_template: "checksums.txt"` (default is `<project>_checksums.txt`, invisible to consumers).
-- Version pinning: workflow pins goreleaser CLI `version: v2.19.0` + action major `@v6`. Upgrade protocol: bump local goreleaser first, re-run snapshot, then bump CI.
+- Version pinning: workflow pins goreleaser CLI `version: v2.19.0` + action major `@v7` (v6 hits GitHub's Node 20 deprecation; v7 inputs unchanged, adds goreleaser binary checksum verification). Upgrade protocol: bump local goreleaser first, re-run snapshot, then bump CI.
 - CHANGELOG body extraction (hard constraint in AGENTS.md): `scripts/gen-release-header.sh` awk-extracts the `## [<version>]` section; always emits the file (empty on miss, exit 0).
 
 ### 4. Validation & Error Matrix
