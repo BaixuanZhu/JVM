@@ -33,12 +33,12 @@
 
 在全部子任务完成后，以一次真实发版（打 tag vX.Y.Z）做端到端验证：
 
-- [ ] GoReleaser 产出全部 5 类资产，命名与 checksums.txt 格式与旧管线完全一致；
+- [x] GoReleaser 产出全部 5 类资产，命名与 checksums.txt 格式与旧管线完全一致；
 - [ ] 旧版本 `jvm upgrade` 能从新 release 自更新成功（资产名匹配 + SHA256 校验通过）；
-- [ ] `install.ps1` 从新 release 安装成功（含校验）；
+- [x] `install.ps1` 从新 release 安装成功（含校验）；
 - [ ] WinGet 侧出现自动版本更新 PR（首提已在早前人工完成的前提下）；
 - [ ] Scoop bucket manifest 自动更新，`scoop update` 能检测到新版本；
-- [ ] AGENTS.md「Setup commands / 发布」章节同步改写，CHANGELOG.md 记录本次变更。
+- [x] AGENTS.md「Setup commands / 发布」章节同步改写，CHANGELOG.md 记录本次变更。
 
 ## Out of Scope
 
