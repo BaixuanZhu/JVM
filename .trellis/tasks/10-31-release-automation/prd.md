@@ -34,7 +34,7 @@
 在全部子任务完成后，以一次真实发版（打 tag vX.Y.Z）做端到端验证：
 
 - [x] GoReleaser 产出全部 5 类资产，命名与 checksums.txt 格式与旧管线完全一致；
-- [ ] 旧版本 `jvm upgrade` 能从新 release 自更新成功（资产名匹配 + SHA256 校验通过）——**移交用户本人验收**（2026-11-01：本机 IP 匿名 API 配额被耗干 403，开发机不具备验收条件；资产名匹配与 SHA256 链路已经 install.ps1 同源验证）；
+- [x] 旧版本 `jvm upgrade` 能从新 release 自更新成功（资产名匹配 + SHA256 校验通过）——用户本人验收通过（2026-11-01，0.15.0 → 0.16.0，无 .bak 残留）；
 - [x] `install.ps1` 从新 release 安装成功（含校验）；
 - [ ] WinGet 侧出现自动版本更新 PR（首提已在早前人工完成的前提下）；
 - [ ] Scoop bucket manifest 自动更新，`scoop update` 能检测到新版本；
