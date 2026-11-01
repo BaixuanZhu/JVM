@@ -9,7 +9,7 @@
 
 ## 执行清单（有序）
 
-1. [ ] 首提 manifest（`winget-create` 或手写 YAML，PackageId `BaixuanZhu.JVM`）：
+1. [x] 首提 manifest（已完成，artifacts/winget-pkgs/ 下三文件多文件格式——**单文件 singleton 的 Installers maxItems=1 装不下双架构，winget-pkgs 也只收多文件**；winget validate 绿、sha256 本地实算、URL 200、License MIT 已查证；提交 PR 时去掉中文注释减少 review 摩擦）：
    - 版本锚定 **v0.16.0**（已是 latest，资产 URL 稳定）；
    - 两个 Installer 条目：x64/arm64、`InstallerType: nullsoft`、`Scope: user`、`InstallModes: silent`（NSIS `/S`）；
    - InstallerUrl = `https://github.com/BaixuanZhu/JVM/releases/download/v0.16.0/jvm-windows-{amd64,arm64}-setup.exe`；

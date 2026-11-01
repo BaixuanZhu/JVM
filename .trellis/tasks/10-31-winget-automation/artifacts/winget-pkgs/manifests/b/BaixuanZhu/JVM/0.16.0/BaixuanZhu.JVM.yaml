@@ -1,0 +1,22 @@
+# winget 首提 manifest —— winget-pkgs 提交版（多文件格式，社区仓库只收这种）
+# 落位路径（fork 后）: manifests/b/BaixuanZhu/JVM/0.16.0/
+# 三个文件: 本文件(version) + .installer.yaml(installer) + .locale.en-US.yaml(defaultLocale)
+# 本地验证: winget validate --manifest <本目录> （已验证通过，winget 1.29.380）
+#
+# 设计说明（与 installer/jvm.nsi 实际行为核对过）：
+#   - Scope: user —— NSIS RequestExecutionLevel user + HKCU 注册表 + %LOCALAPPDATA%\Programs\jvm，免管理员
+#   - 静默开关 —— NSIS 原生 /S（nullsoft 类型 winget 内置默认值，无需显式 InstallerSwitches）；
+#     三 section 均无 /o 标记（静默模式全选），SecConfig 自动跑一次 jvm.exe version 完成自举
+#     （PATH + shell 集成），silent 安装后重开终端即可用
+#   - 卸载链路 —— jvm.nsi 已写 QuietUninstallString "<INSTDIR>\uninstall.exe" /S（HKCU Uninstall\jvm）
+#   - UpgradeBehavior: install —— InstallDirRegKey 复用旧目录原地覆盖，无需先卸载
+#   - arm64 条目 Architecture: arm64 指 winget 目标架构；setup.exe stub 是 x86，在 ARM64 Windows
+#     靠系统内置模拟运行，释放的 jvm.exe 是 ARM64 原生
+#   - ManifestVersion 1.6.0 —— 用到的全部字段自 1.6.0 起可用，兼容较老客户端
+#   - 不用单文件 singleton —— 客户端 schema 对 singleton 的 Installers 限 maxItems: 1，
+#     双架构条目只能走多文件（winget-pkgs 侧同样只收多文件，已实测确认）
+PackageIdentifier: BaixuanZhu.JVM
+PackageVersion: 0.16.0
+DefaultLocale: en-US
+ManifestType: version
+ManifestVersion: 1.6.0

@@ -8,14 +8,14 @@
 
 ## 执行清单（有序）
 
-1. [ ] 编写 `bucket/jvm.json`（Extras 规范）：
+1. [x] 编写 `bucket/jvm.json`（已完成，artifacts/jvm.json；hash regex `$sha256\s+$basename` 三重依据：scoop v0.6.0 源码 + Extras oras.json 先例 + verify-regex.ps1 实测）：
    - `version: 0.16.0`、`description`（英文一句话）、`homepage: https://github.com/BaixuanZhu/JVM`、`license`（以仓库 LICENSE 为准，MIT?）、`url`/`hash` 双架构：
      - `architecture.64bit.url = .../releases/download/v0.16.0/jvm-windows-amd64.zip`（hash 取 checksums.txt 对应行）；
      - `architecture.arm64.url = ...jvm-windows-arm64.zip`；
    - `bin: jvm.exe`（scoop shim）；`checkver: { github: BaixuanZhu/JVM }`；
    - `autoupdate`：`url` 拼接 `$version`；**hash 从 checksums.txt 提取**——`hash.url` 指 checksums.txt、`regex` 按 `$basename` 匹配行（scoop 支持的占位符以 ScoopInstaller/Scoop wiki 的 autoupdate 文档为准，实现时核对——本机有 scoop，可实测）；
    - Extras 有 manifest 风格惯例（字段顺序、注释）——提交前对照同类型新合入的 Go CLI manifest 参考两三例。
-2. [ ] 本地验证（本机 scoop 在 G:\Scoop）：
+2. [x] 本地验证（已完成：免 bucket 直装 0.16.0 成功、jvm version 正常、checkup 干净、卸载无残留；自举写入的 PATH 死链 G:\Scooppps\jvm\current 已由主控清理、scoop cache 已清）：
    - `scoop install <本地 jvm.json 路径>`（免 bucket 直接装 manifest 文件）装成功；
    - 装的是 v0.16.0、`jvm version` 正常、shim `jvm` 解析正确（自举会往用户 PATH 写 scoop apps 目录——本来就是 scoop 惯例，无碍）；
    - `scoop checkup` 无相关报错；验证完 `scoop uninstall jvm` 清理。

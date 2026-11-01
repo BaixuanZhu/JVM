@@ -35,3 +35,12 @@
   已挂 35 分钟后一次性重试（automation-5851c30f）。教训：jvm 的 updatecheck 与
   upgrade 都走匿名 API，开发机跑命令多了会把验收窗口挤掉；可考虑 CI runner 验。
 - 2a/2b 已补 implement.md + jsonl 上下文，manifest 锚定 v0.16.0。
+
+## 2026-11-01 (续3): 2a/2b 本地实现完成
+
+- 2a winget：多文件 manifest（singleton 装不下双架构，schema maxItems=1）三件套落
+  artifacts/winget-pkgs/，winget validate 绿，setup.exe sha256 本地实算（不在 checksums.txt）。
+- 2b scoop：artifacts/jvm.json，hash regex $sha256\s+$basename 三重依据（scoop 源码/Extras
+  先例/实测脚本），免 bucket 直装 0.16.0 + 卸载实测干净；自举 PATH 死链已清理。
+- 均为外部仓库动作待用户批准：winget-pkgs New Package PR、Extras PR、WINGET_TOKEN 创建。
+- jvm upgrade 验收移交用户本人。
