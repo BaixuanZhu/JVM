@@ -23,3 +23,15 @@
   正确）、双架构、zip×2 + checksums、notes 覆盖步按条件跳过、gh release list 无新增。
 - 剩余未验证项收窄为 publish 阶段专属行为：extra_files 上传、gh release edit 真实 tag、
   旧版 upgrade / install.ps1 消费链（父任务集成验收）。
+
+## 2026-11-01 (续2): v0.16.0 首次真实发版 + 集成验收
+
+- goreleaser-action v6 → v7（演练 run 41255176801 绿，Node20 弃用警告消失）。
+- CHANGELOG 落段 → tag v0.16.0 → 新管线首次真实发版 run 41255649049 全绿
+  （extra_files 上传 + gh release edit 两个 publish 阶段首验通过）。
+- 验收通过：6 资产齐 + body 来自 CHANGELOG 段 + checksums 两行格式 + install.ps1
+  隔离目录安装（SHA256 校验链路，注册表 InstallDir 用后已还原）。
+- 唯一未闭环：旧版 jvm upgrade 自更新——本机 IP 匿名 API 配额被持续耗干（403），
+  已挂 35 分钟后一次性重试（automation-5851c30f）。教训：jvm 的 updatecheck 与
+  upgrade 都走匿名 API，开发机跑命令多了会把验收窗口挤掉；可考虑 CI runner 验。
+- 2a/2b 已补 implement.md + jsonl 上下文，manifest 锚定 v0.16.0。
