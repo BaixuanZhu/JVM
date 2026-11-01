@@ -16,7 +16,7 @@
    - **InstallerSha256 注意：setup.exe 不在 checksums.txt 里**（那里只有两个 zip）——从 release 下载 setup.exe ×2 本地 `sha256sum` 计算；
    - ReleaseNotesUrl 指向 Release；Publisher/PublisherUrl/Author/Description/Homepage/License（MIT？以仓库 LICENSE 为准）补齐；
    - 用 `winget validate` / `winget-pkgs` 的 CI 校验器本地过一遍（本机有 winget 可直接验）。
-2. [ ] 人工提 New Package PR 到 microsoft/winget-pkgs（模板 Step 列表如实勾选），跟进 review 至合并——**异步长杆项，尽早提交**，等待期并行做第 3 步。
+2. [x] 人工提 New Package PR 到 microsoft/winget-pkgs（**已提: https://github.com/microsoft/winget-pkgs/pull/467355**，2026-11-01；待办：用户经 CLA bot 签署 Microsoft CLA → CI 安装验证 → reviewer 合并）（模板 Step 列表如实勾选），跟进 review 至合并——**异步长杆项，尽早提交**，等待期并行做第 3 步。
 3. [ ] release workflow 加 winget job（在 `.github/workflows/release.yml` 或独立 `winget.yml`，倾向独立文件——主发版 workflow 保持单一职责）：
    - 触发 `on: release published`（types: [published]），与 tag 主流程解耦；
    - `vedantmgoyal2009/winget-releaser` action，参数：identifier `BaixuanZhu.JVM`、token `${{ secrets.WINGET_TOKEN }}`、双架构（action 需要跑在能访问 installer 的 runner 上，windows-latest 稳妥）；

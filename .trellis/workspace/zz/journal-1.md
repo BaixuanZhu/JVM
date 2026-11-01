@@ -44,3 +44,13 @@
   先例/实测脚本），免 bucket 直装 0.16.0 + 卸载实测干净；自举 PATH 死链已清理。
 - 均为外部仓库动作待用户批准：winget-pkgs New Package PR、Extras PR、WINGET_TOKEN 创建。
 - jvm upgrade 验收移交用户本人。
+
+## 2026-11-01 (续4): 两个外部提交的结局
+
+- winget-pkgs New Package PR 已提: #467355（fork 新建 + 稀疏克隆 + 多文件 manifest，
+  中文注释已剥离；CLA 待用户签、CI 安装验证待跑）。
+- **Extras 挂起**：Package Request 有 required 知名度门槛（≥100 stars/50 forks），
+  本仓库 4 stars 差一个数量级，如实提交必被拒。用户拍板挂起等知名度，不自建 bucket。
+  2b 本地产物保留在 artifacts/，重启时从提 PR 步骤开始。
+- 教训记入：向第三方仓库提交前先查 PR **和 issue** 模板的 required 门槛，研究阶段
+  只看了 PR 面。

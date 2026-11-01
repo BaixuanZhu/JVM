@@ -1,5 +1,7 @@
 # Scoop 分发接入（子任务 3/3）
 
+> **状态：挂起（2026-11-01）**——Extras 的 Package Request issue 有 required 知名度门槛（GitHub 项目 ≥100 stars / 50 forks），本仓库当前 4 stars / 1 forks，如实提交必被拒。用户拍板：等知名度达标后再提，期间不建自建 bucket。本地工作已全部完成（artifacts/jvm.json 已验证），重启时直接从 implement.md 第 3 步（提 PR）开始。
+
 > 顺序约束：**依赖 `10-31-goreleaser-migration` 完成**（manifest 的 URL/hash 指向稳定产线）；与 `10-31-winget-automation` 无依赖，可并行。父任务：`10-31-release-automation`。
 
 ## Goal
