@@ -33,6 +33,7 @@
 
 ### 4. Validation & Error Matrix
 
+- **CI rehearsal without tagging**: `gh workflow run release.yml --ref main` (workflow_dispatch) runs the full pipeline in snapshot mode (`--snapshot --skip=publish`) — all before hooks, both builds, archives, checksums — but creates no Release. Use this after any pipeline change; verified green 2026-11-01.
 - `go vet`/`go test` red in before hooks → release aborts before creating the Release (the gate, unchanged from old pipeline).
 - CHANGELOG section missing → empty header file → CI skips `gh release edit`, goreleaser default changelog body remains.
 - `dist is not empty` error → someone made hooks write into goreleaser's dist dir again; keep the two dirs decoupled.

@@ -33,7 +33,7 @@ CI（`.github/workflows/ci.yml`）：push 到 main / PR 每次跑单元测试（
 
 - **单人开发，直接提交 `main`**：不需要为每个特性另开分支，可直接在 `main` 上提交。仅在改动破坏性较大、想隔离试错、或并发推进多条线时才**推荐**（非强制）开 feat/fix 分支；合并用 `git merge --no-ff`（历史里已有 `Merge feat/...` 记录可循）。无论是否开分支，提交流程不变。
 - 提交信息用 Conventional Commits（中文描述），历史风格参考：`feat(jdk): ...` / `fix(shell): ...` / `docs: ...` / `refactor: ...`；可选 scope 用对应包名。
-- 发版：打 tag（`git tag vX.Y.Z && git push --tags`）→ CI 自动编 + 发 Release；详见下文 Setup / Hard constraints。
+- 发版：打 tag（`git tag vX.Y.Z && git push --tags`）→ CI 自动编 + 发 Release；管线改动后可 `gh workflow run release.yml --ref main` 手动触发 snapshot 演练（全链路但不建 Release 不发版）；详见下文 Setup / Hard constraints。
 
 ## Architecture
 
