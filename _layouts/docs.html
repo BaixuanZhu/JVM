@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="{{ page.description | default: site.description | strip_newlines }}">
-  <meta name="theme-color" content="#0d1117">
+  <meta name="theme-color" content="#fbfaf7">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☕</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,12 +14,14 @@
   {% seo %}
 </head>
 <body class="docs-page">
+  <a class="skip-link" href="#main-content">跳到正文</a>
 
   {% include header.html %}
 
   <div class="container docs-layout">
-    <aside class="docs-sidebar">
-      <nav>
+    <details class="docs-sidebar" open>
+      <summary>文档导航：{{ page.title }}</summary>
+      <nav aria-label="文档导航">
         <p class="sidebar-title">文档</p>
         <a href="{{ '/docs/install/' | relative_url }}"   {% if page.url contains 'install' %}class="active"{% endif %}>安装指南</a>
         <a href="{{ '/docs/commands/' | relative_url }}"  {% if page.url contains 'commands' %}class="active"{% endif %}>命令参考</a>
@@ -30,12 +32,12 @@
         <a href="{{ '/changelog/' | relative_url }}" {% if page.url contains 'changelog' %}class="active"{% endif %}>更新日志</a>
         <a href="{{ site.github_repo }}" target="_blank" rel="noopener">GitHub 仓库 ↗</a>
       </nav>
-    </aside>
+    </details>
 
-    <article class="docs-content">
+    <main class="docs-content" id="main-content" tabindex="-1">
       <h1>{{ page.title }}</h1>
       {{ content }}
-    </article>
+    </main>
   </div>
 
   {% include footer.html %}

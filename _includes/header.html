@@ -1,15 +1,15 @@
 <header class="site-header">
   <div class="container header-inner">
     <a class="brand" href="{{ '/' | relative_url }}">
-      <span class="brand-logo">☕</span>
+      <span class="brand-logo" aria-hidden="true">☕</span>
       <span class="brand-name">Java Version Manager</span>
     </a>
 
-    <button class="nav-toggle" aria-label="打开导航" aria-expanded="false">
+    <button class="nav-toggle" aria-label="打开导航" aria-expanded="false" aria-controls="site-nav">
       <span></span><span></span><span></span>
     </button>
 
-    <nav class="site-nav">
+    <nav class="site-nav" id="site-nav" aria-label="主导航">
       <a href="{{ '/docs/install/' | relative_url }}">文档</a>
       <a href="{{ '/changelog/' | relative_url }}">更新日志</a>
       <a href="{{ site.github_repo }}" target="_blank" rel="noopener">GitHub</a>

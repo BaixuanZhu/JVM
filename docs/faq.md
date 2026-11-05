@@ -48,7 +48,7 @@ jvm update --all      # 或者一次升级全部落后的 (发行版, 大版本)
 
 ## 支持 Windows on ARM 吗？
 
-**支持，且有 ARM64 原生版本。** ARM64 设备请下载 `jvm-windows-arm64-setup.exe`（或便携 zip；一键安装脚本会自动识别架构）。ARM64 版 jvm 默认下载 ARM64 原生 JDK：Microsoft / Zulu / Liberica 全部 LTS 都有 ARM64 构建，Temurin 部分版本有（如 21），Corretto 官方未发布 Windows ARM64 构建（选择时会明确报错并给出替代建议）。
+**支持，且有 ARM64 原生版本。** ARM64 设备请下载 `jvm-windows-arm64-setup.exe`（或便携 zip；一键安装脚本会自动识别架构）。ARM64 版 jvm 默认下载 ARM64 原生 JDK：Microsoft / Zulu / Liberica 全部 LTS 都有 ARM64 构建，Temurin / Temurin EA 部分版本有（以实际查询为准），Corretto 与 GraalVM 官方未发布 Windows ARM64 构建（选择时会明确报错并给出替代建议）。
 
 也可以在 `~/.jvm/config.toml` 里设 `arch = "aarch64"`，或用 `$env:JVM_ARCH` 临时指定。
 

@@ -14,7 +14,7 @@
 
 ```bash
 cd D:/code/jvm-site
-jekyll serve --baseurl /jvm      # 访问 http://127.0.0.1:4000/jvm/
+jekyll serve --baseurl /JVM      # 访问 http://127.0.0.1:4000/JVM/
 ```
 
 发布 = push 到 `gh-pages` 分支。无需打 tag、无需 CI workflow，Pages 直连该分支。

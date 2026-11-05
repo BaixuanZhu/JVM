@@ -4,6 +4,15 @@ description: jvm 各版本变更记录。
 layout: docs
 ---
 
+## [0.16.0] - 2026-11-01
+
+### 变更
+- **发版管线迁移 GoReleaser**：tag 触发后统一执行测试、编译 Windows x64 / ARM64、生成便携 zip 与 checksums.txt，并上传安装器等 Release 资产；NSIS 安装器仍由既有 Makefile / 脚本产出。**资产命名、zip 内容和 checksums 格式保持不变**，`jvm upgrade`、一键安装脚本与官网下载链接不受影响。
+- **GitHub 仓库名 `jvm` → `JVM`**：仅大小写调整，旧链接经 GitHub 重定向继续可用；官网内仓库链接、安装命令与 `baseurl` 已同步更新。
+
+### 新增
+- **Tab 补全支持 v0.15.0 新增的选项**：`available` / `doctor` 选项补全增加 `--json`，`list` / `outdated` 增加 `--json`，`cache clean` 增加 `--older-than`；升级 jvm 后补全脚本自动刷新。
+
 ## [0.15.0] - 2026-10-07
 
 ### 新增

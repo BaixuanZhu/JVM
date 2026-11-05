@@ -14,7 +14,7 @@ description: jvm 的配置文件、目录结构与切换原理。
   current/                ← junction，指向当前选中的版本
     bin/java.exe ...
   config.toml             ← 用户配置（可选，默认不存在）
-  auto-state              ← .jvmrc 自动切换前的手动版本记录（可选存在）
+  auto-state              ← 项目版本文件自动切换前的手动版本记录（可选存在）
 ```
 
 - **PATH** 永远指向 `~/.jvm/current/bin`（只配置一次）
@@ -24,21 +24,23 @@ description: jvm 的配置文件、目录结构与切换原理。
 
 当前终端即时生效则靠 shell 集成函数：`jvm use` 调用真正的 `jvm.exe` 后，由 wrapper 函数在会话内刷新 `JAVA_HOME` 和 `PATH`（子进程改不了父 shell 环境，靠函数绕过）。
 
-## .jvmrc 自动切换
+## 项目版本文件自动切换
 
-shell 集成 v2 在每次出提示符前检查当前目录链上的 `.jvmrc`（双层缓存，目录与 rc 未变时零开销）：
+shell 集成 v3 在每次出提示符前检查当前目录链上的版本固定文件（双层缓存，目录与命中的 rc 文件未变时零开销）。除原生 `.jvmrc` 外，还兼容 `.java-version`、`.tool-versions`（asdf / mise）与 `.sdkmanrc`（sdkman）；同一目录多文件并存时按 `.jvmrc` > `.java-version` > `.tool-versions` > `.sdkmanrc` 优先级取用，不含 Java 版本信息的文件视为未命中：
 
-- cd 进含 `.jvmrc` 的目录 → 自动执行 `jvm use --auto` 切到该版本，切换前的手动版本记入 `~/.jvm/auto-state`
-- 在多个 `.jvmrc` 项目间移动 → 逐个切换，基线不变
-- cd 到无 `.jvmrc` 的目录 → 自动恢复切换前的手动版本
+- cd 进含上述任一版本文件的目录 → 自动执行 `jvm use --auto` 切到该版本，切换前的手动版本记入 `~/.jvm/auto-state`
+- 在多个含版本文件的项目间移动 → 逐个切换，基线不变
+- cd 到无版本文件的目录 → 自动恢复切换前的手动版本
 - 显式 `jvm use <版本>` = 新的手动基线（清掉待恢复状态），不会被自动恢复覆盖
-- `.jvmrc` 指向未安装版本 → 一行警告提示 `jvm install`，不刷屏
+- 版本文件指向未安装版本 → 一行警告提示 `jvm install`，不刷屏
+
+外来生态文件的版本号常不含 build 号，jvm 会先精确匹配，失败后降级为该大版本组内已安装的最新版；`.jvmrc` 自身与显式命令参数仍保持严格语义。`jvm pin` 只写 `.jvmrc`。
 
 仅 PowerShell 与 Git Bash 支持自动切换（CMD 用户用无参数 `jvm use` 显式读取）。
 
 ## 配置文件（可选）
 
-jvm 默认用清华镜像源下载 JDK，**目标架构跟随 jvm 二进制本身**（x64 版下 `x64` JDK，ARM64 版下 `aarch64` JDK），`.jvmrc` 自动切换默认开启。如需更改，在 `~/.jvm/config.toml` 写：
+jvm 默认用清华镜像源下载 JDK，**目标架构跟随 jvm 二进制本身**（x64 版下 `x64` JDK，ARM64 版下 `aarch64` JDK），项目版本文件自动切换默认开启。如需更改，在 `~/.jvm/config.toml` 写：
 
 ```toml
 # 下载镜像源（默认清华 TUNA，仅 Temurin 走镜像）。海外用户可改成官方或其他镜像。
@@ -47,7 +49,7 @@ mirror = "https://mirrors.tuna.tsinghua.edu.cn/Adoptium"
 # 目标架构（默认跟随 jvm 二进制架构；也接受别名 amd64 / arm64）。
 arch = "aarch64"
 
-# .jvmrc 目录自动切换（默认 true，关掉后 cd 不再自动切换）。
+# 项目版本文件自动切换（默认 true，关掉后 cd 不再自动切换）。
 autoswitch = false
 
 # JDK 数据目录重定向（默认空 = ~/.jvm）。把 versions/ 与 cache/ 挪到其他盘，
@@ -73,7 +75,7 @@ install_dir = "D:\\jdks"
 ```powershell
 $env:JVM_MIRROR = "https://your.mirror/Adoptium"
 $env:JVM_ARCH = "aarch64"
-$env:JVM_AUTOSWITCH = "0"       # 临时关闭 .jvmrc 自动切换
+$env:JVM_AUTOSWITCH = "0"       # 临时关闭项目版本文件自动切换
 $env:JVM_INSTALL_DIR = "D:\jdks"
 jvm install 21
 ```
@@ -87,7 +89,7 @@ jvm install 21
 | 切换机制 | Windows junction (reparse point) | 免管理员权限、新终端也生效 |
 | junction 创建 | 原生 `FSCTL_SET_REPARSE_POINT` (syscall) | 不调用 cmd.exe，无注入面 |
 | 当前终端生效 | 启动时自动注入 shell wrapper 函数 | 子进程改不了父 shell 环境 |
-| .jvmrc 自动切换 | 包装 `prompt` (PS) / 挂 `PROMPT_COMMAND` (bash) + 双层缓存 | 出提示符前自然触发，目录与 rc 未变时零开销 |
+| 项目版本文件自动切换 | 包装 `prompt` (PS) / 挂 `PROMPT_COMMAND` (bash) + 双层缓存 | 出提示符前自然触发，目录与 rc 未变时零开销 |
 | PATH 持久化 | 注册表 `HKCU\Environment` + 广播 `WM_SETTINGCHANGE` | 不用 setx（会截断长 PATH） |
 | 下载源 | Temurin 清华镜像优先 → 官方 CDN 回退 | 国内快，且官方兜底 |
 | 安全校验 | 下载强制按官方哈希校验（SHA256 / SHA1） | 损坏/篡改即报错中止 |
