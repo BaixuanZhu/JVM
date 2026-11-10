@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
-	"strconv"
 	"strings"
 
 	"jvm/internal/app"
@@ -79,19 +78,15 @@ func (e ea) Resolve(spec app.VersionSpec) (*app.Asset, error) {
 	v := strings.TrimSpace(spec.Version)
 
 	// 纯大版本号 → 最新 EA build; 其余按完整版本号在列表内精确匹配
-	if isPureNumber(v) {
-		major, err := app.ParseMajorVersion(v)
-		if err != nil {
-			return nil, err
-		}
-		return e.LatestPatch(major)
+	if app.IsPureMajor(v) {
+		return e.LatestPatch(app.MajorOfVersion(v))
 	}
 
 	releaseName, err := e.ResolveReleaseName(v)
 	if err != nil {
 		return nil, err
 	}
-	records, err := fetchEAReleases(majorOfReleaseName(releaseName), pageLimit)
+	records, err := fetchEAReleases(app.MajorOfVersion(releaseName), pageLimit)
 	if err != nil {
 		return nil, err
 	}
@@ -205,7 +200,7 @@ func parseReleaseNamesMajors(body []byte) ([]int, error) {
 	seen := map[int]bool{}
 	var majors []int
 	for _, name := range resp.Releases {
-		m := majorOfReleaseName(name)
+		m := app.MajorOfVersion(name) // release_name (如 "jdk-28+14-ea-beta") → 28
 		if m > 0 && !seen[m] {
 			seen[m] = true
 			majors = append(majors, m)
@@ -213,35 +208,4 @@ func parseReleaseNamesMajors(body []byte) ([]int, error) {
 	}
 	sort.Sort(sort.Reverse(sort.IntSlice(majors)))
 	return majors, nil
-}
-
-// majorOfReleaseName 从 release_name (如 "jdk-28+14-ea-beta") 解析大版本,
-// 失败返回 0。纯函数。
-func majorOfReleaseName(name string) int {
-	name = strings.TrimPrefix(strings.TrimSpace(name), "jdk-")
-	end := strings.IndexFunc(name, func(r rune) bool { return r < '0' || r > '9' })
-	if end < 0 {
-		end = len(name)
-	}
-	if end == 0 {
-		return 0
-	}
-	n, err := strconv.Atoi(name[:end])
-	if err != nil || n <= 0 {
-		return 0
-	}
-	return n
-}
-
-// isPureNumber 判断 s 是否全为数字 (纯大版本号输入)。
-func isPureNumber(s string) bool {
-	if s == "" {
-		return false
-	}
-	for _, r := range s {
-		if r < '0' || r > '9' {
-			return false
-		}
-	}
-	return true
 }

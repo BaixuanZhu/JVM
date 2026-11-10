@@ -9,51 +9,6 @@ import (
 	"jvm/internal/app"
 )
 
-// TestIsPureMajor 验证纯大版本号判定。
-// 纯数字 ("21" / "8") 为 true; 含小数点 / 空串 / 非数字为 false。
-func TestIsPureMajor(t *testing.T) {
-	tests := []struct {
-		in   string
-		want bool
-	}{
-		{"21", true},
-		{"8", true},
-		{"  17  ", true}, // 容许首尾空格
-		// 以下应判 false
-		{"21.0.12.8.1", false}, // 完整版本号
-		{"21.0.12", false},     // 半截版本号
-		{"", false},
-		{"abc", false},
-		{"21a", false},
-	}
-	for _, tt := range tests {
-		if got := isPureMajor(tt.in); got != tt.want {
-			t.Errorf("isPureMajor(%q) = %v, want %v", tt.in, got, tt.want)
-		}
-	}
-}
-
-// TestMajorOf 验证从版本串提取大版本号。
-func TestMajorOf(t *testing.T) {
-	tests := []struct {
-		in   string
-		want int
-	}{
-		{"21.0.12.8.1", 21}, // JDK 9+ 四段格式
-		{"8.502.07.1", 8},   // JDK 8 特殊格式
-		{"17.0.20.8.1", 17},
-		{"26.0.2.10.1", 26},
-		{"21", 21}, // 纯大版本号
-		{"abc", 0}, // 解析失败
-		{"", 0},
-	}
-	for _, tt := range tests {
-		if got := majorOf(tt.in); got != tt.want {
-			t.Errorf("majorOf(%q) = %d, want %d", tt.in, got, tt.want)
-		}
-	}
-}
-
 // TestJdkEntryVersion 验证从 indexmap resource 路径提取版本号。
 // resource 格式: /downloads/resources/{version}/amazon-corretto-{version}-windows-x64-jdk.zip
 func TestJdkEntryVersion(t *testing.T) {

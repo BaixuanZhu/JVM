@@ -74,7 +74,7 @@ func (zulu) Configure(cfgArch, _ string) {
 		if norm, ok := app.NormArch(a); ok {
 			arch = norm
 		} else {
-			fmt.Fprintf(os.Stderr, "⚠️  不支持的架构 %q (仅支持 x64 / aarch64), 回退 x64\n", a)
+			fmt.Fprintf(os.Stderr, "不支持的架构 %q (仅支持 x64 / aarch64), 回退 x64\n", a)
 		}
 	}
 }
@@ -86,18 +86,14 @@ func (zulu) Available() ([]app.Release, error) {
 	return out, nil
 }
 
-// Resolve 按 VersionSpec 查单个版本。纯大版本号 → 最新 GA; 含 patch 的完整版本号 → 精确匹配。
+// Resolve 按 VersionSpec 查单个版本。纯大版本号 → 最新 GA; 其余完整版本号 → 精确匹配。
 func (z zulu) Resolve(spec app.VersionSpec) (*app.Asset, error) {
 	v := strings.TrimSpace(spec.Version)
-	majorStr := v
-	if i := strings.IndexByte(v, '.'); i >= 0 {
-		majorStr = v[:i]
-	}
-	major, err := app.ParseMajorVersion(majorStr)
+	major, err := app.ParseMajorOfVersion(v)
 	if err != nil {
 		return nil, err
 	}
-	if isPureMajor(v) {
+	if app.IsPureMajor(v) {
 		return fetchLatest(major)
 	}
 	return fetchByExact(v, major)
@@ -165,11 +161,6 @@ func apiArch(a string) string {
 // isPlainJDK 判断文件名是否纯 JDK 变体 (排除 fx / crac)。
 func isPlainJDK(name string) bool {
 	return strings.Contains(name, "-ca-jdk")
-}
-
-// isPureMajor 判断输入是否纯大版本号 (不含 ".", 即没有 patch)。
-func isPureMajor(v string) bool {
-	return !strings.ContainsRune(v, '.')
 }
 
 // semverFromZulu 把 java_version 数组 + openjdk_build_number 拼成 semver。

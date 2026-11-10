@@ -51,23 +51,6 @@ func TestIsPlainJDK(t *testing.T) {
 	}
 }
 
-func TestIsPureMajor(t *testing.T) {
-	cases := []struct {
-		in   string
-		want bool
-	}{
-		{"21", true},
-		{"21.0.12", false},
-		{"21.0.12+8", false},
-		{"", true},
-	}
-	for _, c := range cases {
-		if got := isPureMajor(c.in); got != c.want {
-			t.Errorf("isPureMajor(%q) = %v, want %v", c.in, got, c.want)
-		}
-	}
-}
-
 func TestSemverFromZulu(t *testing.T) {
 	cases := []struct {
 		java  []int

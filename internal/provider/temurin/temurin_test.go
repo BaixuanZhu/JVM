@@ -181,6 +181,9 @@ func TestResolveReleaseName(t *testing.T) {
 	}{
 		// 已是完整 release_name → 透传
 		{"完整 release_name 透传", "jdk-21.0.12+8", "jdk-21.0.12+8", false},
+		// JDK 8 的 release_name 形态 (无点无 +, -bN 即 build 号) → 透传
+		{"jdk8u 完整形态透传", "jdk8u512-b09", "jdk8u512-b09", false},
+		{"jdk8u 旧版形态透传", "jdk8u504-b01", "jdk8u504-b01", false},
 		// 含 build 号 → 补 jdk- 前缀 (尊重用户 build 号, 不再 API 反查)
 		{"补 jdk- 前缀", "21.0.12+8", "jdk-21.0.12+8", false},
 		{"带空格 trim", "  17.0.13+11  ", "jdk-17.0.13+11", false},

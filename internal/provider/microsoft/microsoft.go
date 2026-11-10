@@ -77,7 +77,7 @@ func (microsoft) Configure(cfgArch, _ string) {
 		if norm, ok := app.NormArch(a); ok {
 			arch = norm
 		} else {
-			fmt.Fprintf(os.Stderr, "⚠️  不支持的架构 %q (仅支持 x64 / aarch64), 回退 x64\n", a)
+			fmt.Fprintf(os.Stderr, "不支持的架构 %q (仅支持 x64 / aarch64), 回退 x64\n", a)
 		}
 	}
 }
@@ -101,11 +101,7 @@ func (m microsoft) Resolve(spec app.VersionSpec) (*app.Asset, error) {
 	v := strings.TrimSpace(spec.Version)
 
 	// 解析大版本号 (用于 Major 字段和错误提示)
-	majorStr := v
-	if i := strings.IndexByte(v, '.'); i >= 0 {
-		majorStr = v[:i]
-	}
-	major, err := app.ParseMajorVersion(majorStr)
+	major, err := app.ParseMajorOfVersion(v)
 	if err != nil {
 		return nil, err
 	}

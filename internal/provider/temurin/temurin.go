@@ -66,7 +66,7 @@ func (temurin) Configure(cfgArch, cfgMirror string) {
 		if norm, ok := app.NormArch(a); ok {
 			arch = norm
 		} else {
-			fmt.Fprintf(os.Stderr, "⚠️  不支持的架构 %q (仅支持 x64 / aarch64), 回退 x64\n", a)
+			fmt.Fprintf(os.Stderr, "不支持的架构 %q (仅支持 x64 / aarch64), 回退 x64\n", a)
 		}
 	}
 	if m := strings.TrimSpace(cfgMirror); m != "" {
@@ -113,9 +113,12 @@ func (temurin) Available() ([]app.Release, error) {
 }
 
 // Resolve 按 VersionSpec 查单个版本, 返回发行版无关的 Asset。
-// 内部按 spec.Version 格式分流:
-//   - 含 "." 或 "jdk-" 前缀 → 精确版本/release_name 查询
-//   - 纯大版本号           → 该大版本最新 GA, 并内化 CDN 直链解析
+// 二元路由 (全 provider 统一判据, 见 app.IsPureMajor):
+//   - 纯大版本号 → 该大版本最新 GA, 并内化 CDN 直链解析
+//   - 其余一切   → 精确版本/release_name 查询 (ResolveReleaseName 归一化名字)
+//
+// 不枚举版本串格式 —— 新形态 (如 JDK 8 的 "jdk8u512-b09") 只需
+// ResolveReleaseName 认识, 路由零改动。
 //
 // CDN 直链解析 (ResolveCDNURL) 仅在"大版本取最新"场景生效:
 // /binary/latest/{major} 端点只能拿到最新版的 CDN 直链, 精确版本会下错。
@@ -126,21 +129,16 @@ func (t temurin) Resolve(spec app.VersionSpec) (*app.Asset, error) {
 	var asset *app.Asset
 	var err error
 	isLatestMajor := false
-	if strings.ContainsAny(v, ".") || strings.HasPrefix(v, "jdk-") {
+	if app.IsPureMajor(v) {
+		asset, err = fetchLatestAsset(app.MajorOfVersion(v))
+		isLatestMajor = true
+	} else {
 		var releaseName string
 		releaseName, err = t.ResolveReleaseName(v)
 		if err != nil {
 			return nil, err
 		}
 		asset, err = fetchAssetByReleaseName(releaseName)
-	} else {
-		var major int
-		major, err = app.ParseMajorVersion(v)
-		if err != nil {
-			return nil, err
-		}
-		asset, err = fetchLatestAsset(major)
-		isLatestMajor = true
 	}
 	if err != nil {
 		return nil, err
@@ -273,6 +271,8 @@ func (temurin) ShortSemver(semver string) string {
 // ResolveReleaseName 把用户输入的完整版本号标准化成 Adoptium release_name。
 // 砍掉半截 core 匹配后, 用户输完整版本号 (含 build 号) 或纯大版本号两种形式:
 //   - "jdk-21.0.12+8" → 透传 (已是完整 release_name)
+//   - "jdk8u512-b09"  → 透传 (JDK 8 的 release_name 形态: 无点无 +,
+//     "-bN" 即 build 号, API 原样接受)
 //   - "21.0.12+8"     → 补 "jdk-" 前缀
 //
 // 无 build 号的半截形式 (如 "21.0.12") 报错 —— 不同发行版本号格式不一
@@ -285,6 +285,9 @@ func (t temurin) ResolveReleaseName(version string) (string, error) {
 	v := strings.TrimSpace(version)
 	if strings.HasPrefix(v, "jdk-") {
 		return v, nil // 已是完整 release_name
+	}
+	if strings.HasPrefix(v, "jdk8u") {
+		return v, nil // JDK 8 的 release_name, 本身即完整形态
 	}
 	// 完整版本号必须含 build 号 (X.Y.Z+N)
 	if !strings.Contains(v, "+") {

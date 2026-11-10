@@ -58,26 +58,6 @@ func TestParseReleaseNamesMajors(t *testing.T) {
 	}
 }
 
-func TestMajorOfReleaseName(t *testing.T) {
-	tests := []struct {
-		in   string
-		want int
-	}{
-		{"jdk-28+14-ea-beta", 28},
-		{"jdk-27+35-ea-beta", 27},
-		{"jdk-25.0.1+13", 25}, // 容错 GA 形式
-		{"28+14-ea-beta", 28}, // 无 jdk- 前缀
-		{"", 0},
-		{"jdk-ea-beta", 0},
-		{"garbage", 0},
-	}
-	for _, tt := range tests {
-		if got := majorOfReleaseName(tt.in); got != tt.want {
-			t.Errorf("majorOfReleaseName(%q) = %d, want %d", tt.in, got, tt.want)
-		}
-	}
-}
-
 // TestEAAssetFromRecord 验证 EA Asset 构造: Distro 为 temurin-ea、
 // 不填 MirrorURL、ReleaseName 剥 jdk- 前缀。
 func TestEAAssetFromRecord(t *testing.T) {

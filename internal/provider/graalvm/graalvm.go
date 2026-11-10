@@ -22,7 +22,6 @@ import (
 	"net/http"
 	"os"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"jvm/internal/app"
@@ -85,7 +84,7 @@ func (graalvm) Configure(cfgArch, _ string) {
 		if norm, ok := app.NormArch(a); ok {
 			arch = norm
 		} else {
-			fmt.Fprintf(os.Stderr, "⚠️  不支持的架构 %q (仅支持 x64 / aarch64), 回退 x64\n", a)
+			fmt.Fprintf(os.Stderr, "不支持的架构 %q (仅支持 x64 / aarch64), 回退 x64\n", a)
 		}
 	}
 }
@@ -126,11 +125,7 @@ func (g graalvm) Resolve(spec app.VersionSpec) (*app.Asset, error) {
 	}
 	v := strings.TrimSpace(spec.Version)
 
-	majorStr := v
-	if i := strings.IndexByte(v, '.'); i >= 0 {
-		majorStr = v[:i]
-	}
-	major, err := app.ParseMajorVersion(majorStr)
+	major, err := app.ParseMajorOfVersion(v)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +136,7 @@ func (g graalvm) Resolve(spec app.VersionSpec) (*app.Asset, error) {
 	}
 
 	// 纯大版本号 → 探测最新 patch (LatestPatch 已含 arch/major 守卫)
-	if v == strconv.Itoa(major) {
+	if app.IsPureMajor(v) {
 		a, err := g.LatestPatch(major)
 		if err != nil {
 			return nil, err
@@ -212,11 +207,8 @@ func fetchAsset(version string, major int) (*app.Asset, error) {
 // archiveURL 拼归档直链: {cdn}/{major}/archive/graalvm-jdk-{version}_windows-x64_bin.zip
 // major 从 version 首段提取 (21.0.12 → 21)。
 func archiveURL(version string) string {
-	major := version
-	if i := strings.IndexByte(version, '.'); i >= 0 {
-		major = version[:i]
-	}
-	return fmt.Sprintf("%s/%s/archive/%s", cdnBase, major, fmt.Sprintf(filenameTpl, version, app.ArchX64))
+	return fmt.Sprintf("%s/%d/archive/%s", cdnBase, app.MajorOfVersion(version),
+		fmt.Sprintf(filenameTpl, version, app.ArchX64))
 }
 
 // fetchSHA256 拉取 zip 的 .sha256 旁路文件并解析哈希。

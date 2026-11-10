@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 
 	"jvm/internal/app"
@@ -84,7 +83,7 @@ func (corretto) Configure(cfgArch, _ string) {
 		if norm, ok := app.NormArch(a); ok {
 			arch = norm
 		} else {
-			fmt.Fprintf(os.Stderr, "⚠️  不支持的架构 %q (仅支持 x64 / aarch64), 回退 x64\n", a)
+			fmt.Fprintf(os.Stderr, "不支持的架构 %q (仅支持 x64 / aarch64), 回退 x64\n", a)
 		}
 	}
 }
@@ -123,11 +122,7 @@ func (c corretto) Resolve(spec app.VersionSpec) (*app.Asset, error) {
 	v := strings.TrimSpace(spec.Version)
 
 	// 解析大版本号 (无论输入是纯大版本还是完整版本号, 都要先拿到 major)
-	majorStr := v
-	if i := strings.IndexByte(v, '.'); i >= 0 {
-		majorStr = v[:i]
-	}
-	major, err := app.ParseMajorVersion(majorStr)
+	major, err := app.ParseMajorOfVersion(v)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +135,7 @@ func (c corretto) Resolve(spec app.VersionSpec) (*app.Asset, error) {
 	latestVersion := entry.version() // "21.0.12.8.1"
 
 	// 纯大版本号 → 直接用最新版
-	if isPureMajor(v) {
+	if app.IsPureMajor(v) {
 		return entry.toAsset(), nil
 	}
 
@@ -229,7 +224,7 @@ func (e jdkEntry) toAsset() *app.Asset {
 	ver := e.version()
 	return &app.Asset{
 		Semver:      ver,
-		Major:       majorOf(ver),
+		Major:       app.MajorOfVersion(ver),
 		ZipURL:      cdnBase + e.Resource,
 		Checksum:    e.ChecksumSHA,
 		ReleaseName: ver,
@@ -274,24 +269,4 @@ func fetchWindowsJDKEntry(major int, targetArch string) (jdkEntry, error) {
 		return jdkEntry{}, fmt.Errorf("Corretto 大版本 %d 的 Windows/%s JDK 资源为空", major, targetArch)
 	}
 	return jdkEntry{entry.Zip}, nil
-}
-
-// isPureMajor 判断是否纯数字大版本号 ("21" / "8"), 含小数点不算。
-func isPureMajor(s string) bool {
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return false
-	}
-	_, err := strconv.Atoi(s)
-	return err == nil
-}
-
-// majorOf 从版本串开头解析大版本号 ("21.0.12.8.1" → 21), 解析失败返回 0。
-func majorOf(v string) int {
-	majorStr := v
-	if i := strings.IndexByte(v, '.'); i >= 0 {
-		majorStr = v[:i]
-	}
-	m, _ := app.ParseMajorVersion(majorStr)
-	return m
 }

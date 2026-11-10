@@ -76,7 +76,7 @@ func (liberica) Configure(cfgArch, _ string) {
 		if norm, ok := app.NormArch(a); ok {
 			arch = norm
 		} else {
-			fmt.Fprintf(os.Stderr, "⚠️  不支持的架构 %q (仅支持 x64 / aarch64), 回退 x64\n", a)
+			fmt.Fprintf(os.Stderr, "不支持的架构 %q (仅支持 x64 / aarch64), 回退 x64\n", a)
 		}
 	}
 }
@@ -88,14 +88,11 @@ func (liberica) Available() ([]app.Release, error) {
 	return out, nil
 }
 
-// Resolve 按 VersionSpec 查单个版本。纯大版本号 → 最新 GA; 含 patch 的完整版本号 → 精确匹配。
+// Resolve 按 VersionSpec 查单个版本。纯大版本号 → 最新 GA; 其余完整版本号
+// (含 JDK 8 的 "8u504+1" 无点形态) → 精确匹配。
 func (l liberica) Resolve(spec app.VersionSpec) (*app.Asset, error) {
 	v := strings.TrimSpace(spec.Version)
-	majorStr := v
-	if i := strings.IndexByte(v, '.'); i >= 0 {
-		majorStr = v[:i]
-	}
-	major, err := app.ParseMajorVersion(majorStr)
+	major, err := app.ParseMajorOfVersion(v)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +100,7 @@ func (l liberica) Resolve(spec app.VersionSpec) (*app.Asset, error) {
 	if err != nil {
 		return nil, err
 	}
-	if isPureMajor(v) {
+	if app.IsPureMajor(v) {
 		matched := filterLatestInFeature(all, major)
 		if len(matched) == 0 {
 			return nil, fmt.Errorf("Liberica 没有 windows/%s 的 JDK %d GA 包", arch, major)
@@ -186,11 +183,6 @@ func apiArchParams(a string) (apiArch, apiBitness string) {
 		return "arm", "64"
 	}
 	return "x86", "64"
-}
-
-// isPureMajor 判断输入是否纯大版本号 (不含 ".", 即没有 patch)。
-func isPureMajor(v string) bool {
-	return !strings.ContainsRune(v, '.')
 }
 
 // downloadURL 自拼 BellSoft 官方 CDN 直链 (比 API 返回的 GitHub 域稳定)。

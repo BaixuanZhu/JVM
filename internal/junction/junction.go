@@ -348,7 +348,7 @@ func MigrateLegacyDirs() error {
 			if MajorOf(name) > 0 {
 				continue
 			}
-			fmt.Fprintf(os.Stderr, "⚠️  跳过无法识别的目录: %s (不是已知的 JDK 版本目录)\n", name)
+			fmt.Fprintf(os.Stderr, "跳过无法识别的目录: %s (不是已知的 JDK 版本目录)\n", name)
 			continue
 		}
 		if newName == name {
@@ -360,7 +360,7 @@ func MigrateLegacyDirs() error {
 
 		// 新名已存在: 不覆盖 (用户可能已装新名版本)
 		if _, err := os.Stat(newPath); err == nil {
-			fmt.Fprintf(os.Stderr, "⚠️  迁移跳过 %s → %s (目标已存在)\n", name, newName)
+			fmt.Fprintf(os.Stderr, "迁移跳过 %s → %s (目标已存在)\n", name, newName)
 			continue
 		}
 
@@ -376,7 +376,7 @@ func MigrateLegacyDirs() error {
 			return fmt.Errorf("重命名 %s → %s 失败: %w", name, newName, err)
 		}
 		migrated = true
-		fmt.Fprintf(os.Stderr, "📦 迁移版本目录: %s → %s\n", name, newName)
+		fmt.Fprintf(os.Stderr, "迁移版本目录: %s → %s\n", name, newName)
 
 		if relinkCurrent {
 			if err := Create(paths.CurrentLink, newPath); err != nil {
@@ -386,7 +386,7 @@ func MigrateLegacyDirs() error {
 	}
 
 	if migrated {
-		fmt.Fprintln(os.Stderr, "✅ 旧版本目录已迁移到新命名格式")
+		fmt.Fprintln(os.Stderr, "旧版本目录已迁移到新命名格式")
 	}
 	return nil
 }
@@ -467,46 +467,24 @@ func isAllLetters(s string) bool {
 // 旧的无前缀目录 ("21.0.12+8" → 21, 启动时视为 temurin) 和带 jdk- / jdk
 // 前缀的历史输入 (迁移期的用户手输 / 残留旧目录)。
 //
-// 先用 SplitDistro 剥掉 distro 前缀 (若有), 再取开头连续数字。
+// 先用 SplitDistro 剥掉 distro 前缀 (若有), 版本串部分委托 app.MajorOfVersion
+// (单一事实源, 含 jdk 前缀剥离)。
 // 导出以供 doctor 包复用 (检查版本目录有效性), 避免解析逻辑重复。
 // 纯函数, 便于表驱动测试。
 func MajorOf(s string) int {
 	_, ver := SplitDistro(strings.TrimSpace(s))
-	ver = strings.TrimPrefix(ver, "jdk-")
-	ver = strings.TrimPrefix(ver, "jdk")
-	ver = strings.TrimPrefix(ver, "JDK-")
-	ver = strings.TrimPrefix(ver, "JDK")
-	// 取开头连续数字作为大版本号
-	end := strings.IndexFunc(ver, func(r rune) bool { return r < '0' || r > '9' })
-	if end < 0 {
-		end = len(ver)
-	}
-	if end == 0 {
-		return 0
-	}
-	n, err := strconv.Atoi(ver[:end])
-	if err != nil || n <= 0 {
-		return 0
-	}
-	return n
+	return app.MajorOfVersion(ver)
 }
 
 // pureMajor 判断 s 是否为纯数字大版本号 (如 "8" / "21"), 是则返回它, 否则 ok=false。
-// 这是 ResolveVersion 唯一接受的"模糊"输入形式。纯函数, 便于测试。
+// 这是 ResolveVersion 唯一接受的"模糊"输入形式。
+// 委托 app.IsPureMajor (单一事实源), 外面保留历史契约的首尾 trim。纯函数, 便于测试。
 func pureMajor(s string) (int, bool) {
 	s = strings.TrimSpace(s)
-	if s == "" {
+	if !app.IsPureMajor(s) {
 		return 0, false
 	}
-	for _, r := range s {
-		if r < '0' || r > '9' {
-			return 0, false
-		}
-	}
-	n, err := strconv.Atoi(s)
-	if err != nil || n <= 0 {
-		return 0, false
-	}
+	n, _ := strconv.Atoi(s)
 	return n, true
 }
 
