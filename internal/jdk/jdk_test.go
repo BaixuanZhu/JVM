@@ -288,7 +288,7 @@ func TestDownloadFile_InterruptThenResume(t *testing.T) {
 			t.Fatalf("字节 %d 不匹配: got %d, want %d (续传数据损坏)", i, data[i], content[i])
 		}
 	}
-	t.Log("✅ 中断→续传后文件逐字节完整")
+	t.Log("中断→续传后文件逐字节完整")
 
 	// .part 应已被 rename 清理。
 	if _, err := os.Stat(dest + ".part"); !os.IsNotExist(err) {

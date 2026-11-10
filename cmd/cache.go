@@ -120,7 +120,7 @@ func listCacheEntries() ([]cacheEntry, int64) {
 // 空缓存给空态提示。
 func listCache() {
 	entries, total := listCacheEntries()
-	fmt.Printf("📦 下载缓存 (%s):\n", paths.CacheDir)
+	fmt.Printf("下载缓存 (%s):\n", paths.CacheDir)
 	if len(entries) == 0 {
 		fmt.Println("   (空。安装 JDK 后, 安装包会留在这里, 卸载重装免重新下载)")
 		return
@@ -157,17 +157,17 @@ func cleanCache(maxAge time.Duration, filtered bool) {
 			freed += info.Size()
 		}
 		if err := os.Remove(filepath.Join(paths.CacheDir, name)); err != nil {
-			fmt.Printf("⚠️  删除 %s 失败: %v\n", name, err)
+			fmt.Printf("删除 %s 失败: %v\n", name, err)
 			continue
 		}
 		removed++
 	}
 	if !filtered {
-		fmt.Printf("🗑️  已清理 %d 个缓存文件, 释放 %.1f MB\n", removed, float64(freed)/1024/1024)
+		fmt.Printf("已清理 %d 个缓存文件, 释放 %.1f MB\n", removed, float64(freed)/1024/1024)
 		return
 	}
 	days := int(maxAge.Hours() / 24)
-	msg := fmt.Sprintf("🗑️  已清理 %d 个缓存文件 (修改时间早于 %d 天前), 释放 %.1f MB",
+	msg := fmt.Sprintf("已清理 %d 个缓存文件 (修改时间早于 %d 天前), 释放 %.1f MB",
 		removed, days, float64(freed)/1024/1024)
 	if kept > 0 {
 		msg += fmt.Sprintf("; 保留 %d 个 (%d 天内)", kept, days)

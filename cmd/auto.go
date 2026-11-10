@@ -60,19 +60,19 @@ func UseAuto(enabled bool) {
 	switch action {
 	case autoNoop:
 	case autoWarn:
-		fmt.Printf("⚠️  %s\n", warn)
+		fmt.Printf("%s\n", warn)
 	case autoSwitch:
 		// 第一次自动切换前记住手动版本, 供离开版本固定目录时恢复
 		if state == "" {
 			if cur := currentDirName(); cur != "" {
 				if err := writeAutoState(cur); err != nil {
-					fmt.Printf("⚠️  记录自动切换状态失败: %v\n", err)
+					fmt.Printf("记录自动切换状态失败: %v\n", err)
 				}
 			}
 		}
-		switchQuietly(target, "📌 "+filepath.Base(foundPath)+": 切换到 "+junction.DisplayName(target))
+		switchQuietly(target, filepath.Base(foundPath)+": 切换到 "+junction.DisplayName(target))
 	case autoRevert:
-		switchQuietly(target, "📌 离开版本固定目录: 恢复 "+junction.DisplayName(target))
+		switchQuietly(target, "离开版本固定目录: 恢复 "+junction.DisplayName(target))
 		clearAutoState()
 	}
 }
@@ -125,7 +125,7 @@ func decideAuto(rcFound bool, rcDir, current, state string) (autoAction, string)
 // switchQuietly 静默切换 (复用 switchTo), 成功打一行结果, 失败打警告不打断。
 func switchQuietly(dir, message string) {
 	if err := switchTo(filepath.Join(paths.VersionsDir, dir)); err != nil {
-		fmt.Printf("⚠️  自动切换失败: %v\n", err)
+		fmt.Printf("自动切换失败: %v\n", err)
 		return
 	}
 	fmt.Println(message)

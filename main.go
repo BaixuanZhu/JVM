@@ -44,7 +44,7 @@ func main() {
 	// paths.VersionsDir 的启动逻辑 (MigrateLegacyDirs 等) 与命令执行。
 	if cfg.InstallDir != "" {
 		if err := paths.SetInstallDir(cfg.InstallDir); err != nil {
-			fmt.Fprintf(os.Stderr, "⚠️  install_dir 配置无效, 使用默认目录: %v\n", err)
+			fmt.Fprintf(os.Stderr, "install_dir 配置无效, 使用默认目录: %v\n", err)
 		}
 	}
 
@@ -58,7 +58,7 @@ func main() {
 	}
 	// 把旧版 jvm 遗留的版本目录迁移到新的纯 semver 命名 (幂等, 首次升级时触发)
 	if err := junction.MigrateLegacyDirs(); err != nil {
-		fmt.Fprintf(os.Stderr, "⚠️  版本目录迁移失败: %v\n", err)
+		fmt.Fprintf(os.Stderr, "版本目录迁移失败: %v\n", err)
 	}
 	// 清理上次 upgrade 残留的 .bak (旧进程占用时删不掉, 下次启动再清)
 	upgrade.CleanupStaleBak()

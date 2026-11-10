@@ -68,7 +68,7 @@ func check(repo, current string, interval time.Duration, now time.Time,
 
 	latest := stripV(tag)
 	if app.CompareVersions(current, latest) < 0 {
-		print("ℹ️  jvm 有新版本 %s (当前 %s), 运行 jvm upgrade 升级\n", tag, current)
+		print("jvm 有新版本 %s (当前 %s), 运行 jvm upgrade 升级\n", tag, current)
 	}
 	writeLastCheck(now)
 }

@@ -30,7 +30,7 @@ func versionFromPinrc() (string, bool) {
 			"  或在当前目录 (或上层) 创建 .jvmrc: 运行 jvm pin <版本号>\n" +
 			"  (也兼容读取 .java-version / .tool-versions / .sdkmanrc)")
 	}
-	fmt.Printf("📌 读取 %s: %s\n", foundPath, spec)
+	fmt.Printf("读取 %s: %s\n", foundPath, spec)
 	return spec, src != pinrc.SrcJVMRC
 }
 

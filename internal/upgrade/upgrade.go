@@ -51,7 +51,7 @@ func expectedAssetName() string {
 
 // Run 检查并更新到最新版 (供 cmd upgrade 调用)。
 func Run() {
-	fmt.Printf("🔍 正在检查 %s 的最新版本...\n", githubRepo)
+	fmt.Printf("正在检查 %s 的最新版本...\n", githubRepo)
 	rel, err := fetchLatestGitHubRelease()
 	if err != nil {
 		app.Fail("检查更新失败: " + err.Error())
@@ -61,7 +61,7 @@ func Run() {
 	fmt.Printf("   最新版本: %s (当前: %s)\n", latestVersion, app.Version)
 
 	if latestVersion == app.Version {
-		fmt.Println("✅ 已经是最新版本, 无需更新。")
+		fmt.Println("已经是最新版本, 无需更新。")
 		return
 	}
 
@@ -78,7 +78,7 @@ func Run() {
 		app.Fail(fmt.Sprintf("最新 release 里没有找到 asset %s。\n   请到 %s 手动下载。", want, rel.HTMLURL))
 	}
 
-	fmt.Printf("⬇️  下载 %s ...\n", want)
+	fmt.Printf("下载 %s ...\n", want)
 	tmpZip := filepath.Join(os.TempDir(), "jvm-upgrade-"+latestVersion+".zip")
 	if err := jdk.DownloadFile(assetURL, tmpZip, jdk.WithRetries(3)); err != nil {
 		app.Fail("下载失败: " + err.Error())
@@ -88,7 +88,7 @@ func Run() {
 	// SHA256 校验: 从 release 的 checksums.txt asset 里取出期望值, 与本地下载文件比对。
 	// 旧版 release 若没有 checksums.txt, 打印警告后继续 (不阻断向后兼容)。
 	if expectedHash, ok := fetchExpectedChecksum(rel, want); ok {
-		fmt.Print("🔐 校验 SHA256... ")
+		fmt.Print("校验 SHA256... ")
 		got, err := fileSHA256(tmpZip)
 		if err != nil {
 			app.Fail("计算下载文件 SHA256 失败: " + err.Error())
@@ -99,10 +99,10 @@ func Run() {
 		}
 		fmt.Println("通过")
 	} else {
-		fmt.Println("⚠️  该 release 未提供 checksums.txt, 跳过完整性校验。")
+		fmt.Println("该 release 未提供 checksums.txt, 跳过完整性校验。")
 	}
 
-	fmt.Print("📂 解压中... ")
+	fmt.Print("解压中... ")
 	// 解压到当前 exe 同目录, 避免跨盘符 rename 失败 (os.Rename 走 MoveFileEx, 不能跨卷)
 	selfExe, err := os.Executable()
 	if err != nil {
@@ -116,13 +116,13 @@ func Run() {
 	defer os.Remove(tmpExe)
 	fmt.Println("完成")
 
-	fmt.Print("🔄 替换 jvm.exe ... ")
+	fmt.Print("替换 jvm.exe ... ")
 	if err := replaceSelf(tmpExe); err != nil {
 		app.Fail("替换失败: " + err.Error())
 	}
 	fmt.Println("完成")
 
-	fmt.Printf("\n✅ 已更新到 %s\n", latestVersion)
+	fmt.Printf("\n已更新到 %s\n", latestVersion)
 	fmt.Println("   新版本将在下次运行 jvm 时生效。")
 }
 

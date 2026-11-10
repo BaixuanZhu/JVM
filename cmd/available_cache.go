@@ -184,5 +184,5 @@ func saveGroupCache(distro string, g versionGroup) {
 
 // cacheNoticeLine 是缓存命中时的一行说明 (表格/分组共用文案)。
 func cacheNoticeLine() string {
-	return fmt.Sprintf("⚡ %.0f 分钟内的缓存结果 (jvm available --refresh 强制刷新)", availableCacheTTL.Minutes())
+	return fmt.Sprintf("%.0f 分钟内的缓存结果 (jvm available --refresh 强制刷新)", availableCacheTTL.Minutes())
 }

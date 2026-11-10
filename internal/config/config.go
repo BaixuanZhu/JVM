@@ -92,7 +92,7 @@ func Load() Config {
 	if data, err := os.ReadFile(path); err == nil {
 		var fileCfg fileConfig
 		if err := toml.Unmarshal(data, &fileCfg); err != nil {
-			fmt.Fprintf(os.Stderr, "⚠️  解析 %s 失败, 使用默认配置: %v\n", path, err)
+			fmt.Fprintf(os.Stderr, "解析 %s 失败, 使用默认配置: %v\n", path, err)
 		} else {
 			// 只在文件里显式设了非空值时才覆盖
 			if strings.TrimSpace(fileCfg.Mirror) != "" {
@@ -121,7 +121,7 @@ func Load() Config {
 		if b, err := strconv.ParseBool(v); err == nil {
 			cfg.AutoSwitch = b
 		} else {
-			fmt.Fprintf(os.Stderr, "⚠️  JVM_AUTOSWITCH=%q 不是布尔值 (1/0/true/false), 已忽略\n", v)
+			fmt.Fprintf(os.Stderr, "JVM_AUTOSWITCH=%q 不是布尔值 (1/0/true/false), 已忽略\n", v)
 		}
 	}
 	if v := strings.TrimSpace(os.Getenv("JVM_INSTALL_DIR")); v != "" {

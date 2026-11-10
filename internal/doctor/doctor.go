@@ -65,7 +65,7 @@ type profileItem struct {
 // 数据目录重定向后旧默认目录的残留版本 (只提示, 不自动搬迁)。
 func Run(fix, assumeYes, jsonOut bool, installDir string) {
 	if !jsonOut {
-		fmt.Println("🏥 jvm 环境诊断")
+		fmt.Println("jvm 环境诊断")
 		fmt.Println(strings.Repeat("─", 40))
 	}
 
@@ -122,11 +122,11 @@ func Run(fix, assumeYes, jsonOut bool, installDir string) {
 	fmt.Println(strings.Repeat("─", 40))
 	switch {
 	case len(failed) == 0:
-		fmt.Println("✅ 所有检查通过, 环境配置正常。")
+		fmt.Println("所有检查通过, 环境配置正常。")
 	case fix:
 		applyFixes(failed, assumeYes, regPath)
 	default:
-		fmt.Printf("⚠️  发现 %d 个问题 (见上方 ✗ 项的修复建议)。\n", len(failed))
+		fmt.Printf("发现 %d 个问题 (见上方 ✗ 项的修复建议)。\n", len(failed))
 		fmt.Println("运行 jvm doctor --fix 可自动修复部分问题。")
 	}
 }
@@ -599,7 +599,7 @@ func checkRegistryPathResidue(regPath, currentLink string) check {
 // 残留清理会删用户 PATH 条目, 删除前逐条确认 (assumeYes 跳过);
 // 需要重装或动系统 PATH 的项 (PATH 冲突/版本损坏) 保留建议不自动处理。
 func applyFixes(failed []check, assumeYes bool, regPath string) {
-	fmt.Println("🔧 自动修复:")
+	fmt.Println("自动修复:")
 	fixed := 0
 	for _, c := range failed {
 		switch c.name {
@@ -652,7 +652,7 @@ func applyFixes(failed []check, assumeYes bool, regPath string) {
 			fixed++
 		default:
 			// PATH 冲突 / current 的 java / java 版本 / 版本目录完整性: 需手动或重装
-			fmt.Printf("  ⏭️  %s: 不自动修复 (见上方建议)\n", c.name)
+			fmt.Printf("  %s: 不自动修复 (见上方建议)\n", c.name)
 		}
 	}
 	if fixed > 0 {
@@ -675,7 +675,7 @@ func fixResidue(regPath string, assumeYes bool) {
 		}
 	}
 	if len(remove) == 0 {
-		fmt.Println("  ⏭️  注册表 PATH 残留: 未选择任何条目, 跳过")
+		fmt.Println("  注册表 PATH 残留: 未选择任何条目, 跳过")
 		return
 	}
 	if err := env.RemoveFromUserPath(remove); err != nil {
@@ -690,7 +690,7 @@ func fixResidue(regPath string, assumeYes bool) {
 func fixJunction() fixState {
 	switch junctionFixPlan(paths.CurrentLink) {
 	case junctionSkip:
-		fmt.Println("  ⏭️  current 链接: current 是非空普通目录, 需手动确认后删除 (不自动清用户数据)")
+		fmt.Println("  current 链接: current 是非空普通目录, 需手动确认后删除 (不自动清用户数据)")
 		return fixSkip
 	case junctionReplace:
 		if err := junction.Remove(paths.CurrentLink); err != nil {
@@ -700,7 +700,7 @@ func fixJunction() fixState {
 	}
 	names, _ := junction.ListLocal()
 	if len(names) == 0 {
-		fmt.Println("  ⏭️  current 链接: 没有已安装版本可指向, 先 jvm install <版本号>")
+		fmt.Println("  current 链接: 没有已安装版本可指向, 先 jvm install <版本号>")
 		return fixFail
 	}
 	target := filepath.Join(paths.VersionsDir, names[0]) // ListLocal 降序, 首个即最新

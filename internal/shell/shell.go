@@ -128,13 +128,13 @@ func InitCompletionDispatch(args []string) {
 		if err := installToProfile(profilePath, script); err != nil {
 			app.Fail("写入 profile 失败: " + err.Error())
 		}
-		fmt.Printf("✅ 已写入 %s\n", profilePath)
+		fmt.Printf("已写入 %s\n", profilePath)
 		fmt.Printf("   重启 %s 或重新加载配置即可生效。\n", shellLabel(sh))
 		fmt.Printf("   之后输入 jvm 后按 Tab 即可补全命令。\n")
 		return
 	}
 	fmt.Println(script)
-	fmt.Printf("\n💡 自动安装到 profile: jvm completion %s --install\n", sh)
+	fmt.Printf("\n自动安装到 profile: jvm completion %s --install\n", sh)
 }
 
 // completionScriptFor 返回某个 shell 的补全脚本和对应 profile 路径
@@ -161,7 +161,7 @@ func cmdInit(shell string, doInstall bool) {
 		if err := installToProfile(profilePath, script); err != nil {
 			app.Fail("写入 profile 失败: " + err.Error())
 		}
-		fmt.Printf("✅ 已写入 %s\n", profilePath)
+		fmt.Printf("已写入 %s\n", profilePath)
 		fmt.Printf("   重启 %s 或重新加载配置即可生效。\n", shellLabel(shell))
 		fmt.Printf("   之后 `jvm use <版本>` 在当前终端立即生效。\n")
 		return
@@ -169,7 +169,7 @@ func cmdInit(shell string, doInstall bool) {
 
 	fmt.Println(script)
 	fmt.Println(profileMarker + " (以上为自动生成, 不要手改)")
-	fmt.Printf("\n💡 自动安装到 profile: jvm init %s --install\n", shell)
+	fmt.Printf("\n自动安装到 profile: jvm init %s --install\n", shell)
 }
 
 // shellIntegration 返回某个 shell 的集成脚本和对应 profile 路径

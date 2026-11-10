@@ -38,7 +38,7 @@ var safeVersionDir = regexp.MustCompile(`^[A-Za-z0-9._+\-]+$`)
 // spec.Version 的格式由各 provider 自己解析 (ResolveReleaseName), 这里不预处理。
 // provider 通过 provider.Get(spec.Distro) 由调用方传入。
 func InstallVersion(p provider.Provider, spec app.VersionSpec) error {
-	fmt.Printf("🔍 正在查询 %s %s ...\n", p.DisplayName(), spec.Version)
+	fmt.Printf("正在查询 %s %s ...\n", p.DisplayName(), spec.Version)
 	asset, err := p.Resolve(spec)
 	if err != nil {
 		return err
@@ -60,7 +60,7 @@ func InstallLocal(zipPath string, spec app.VersionSpec) error {
 
 	target := filepath.Join(paths.VersionsDir, finalName)
 	if info, _ := os.Stat(target); info != nil && info.IsDir() {
-		fmt.Printf("⚠️  已安装 %s\n", finalName)
+		fmt.Printf("已安装 %s\n", finalName)
 		fmt.Printf("   如需重装, 请先 jvm uninstall %s\n", finalName)
 		return nil
 	}
@@ -69,7 +69,7 @@ func InstallLocal(zipPath string, spec app.VersionSpec) error {
 	if err != nil || info.IsDir() {
 		return fmt.Errorf("zip 文件不存在: %s", zipPath)
 	}
-	fmt.Printf("📦 从本地包安装 %s\n", finalName)
+	fmt.Printf("从本地包安装 %s\n", finalName)
 	fmt.Printf("   源: %s (%.1f MB, 不做远程校验和校验)\n", zipPath, float64(info.Size())/1024/1024)
 
 	// 读顶层目录。与 Install 不同, 失败不删用户的源文件。
@@ -88,7 +88,7 @@ func InstallLocal(zipPath string, spec app.VersionSpec) error {
 		return err
 	}
 
-	fmt.Printf("\n✅ 安装完成: %s\n", finalName)
+	fmt.Printf("\n安装完成: %s\n", finalName)
 	fmt.Printf("   运行 `jvm use %s@%s` 来切换到这个版本\n", spec.Distro, spec.Version)
 	return nil
 }
@@ -117,7 +117,7 @@ func Install(asset *app.Asset, name string) error {
 	// 检查这个版本是否已装过 (按最终目录名精确判断)
 	target := filepath.Join(paths.VersionsDir, finalName)
 	if info, _ := os.Stat(target); info != nil && info.IsDir() {
-		fmt.Printf("⚠️  已安装 %s\n", finalName)
+		fmt.Printf("已安装 %s\n", finalName)
 		fmt.Printf("   如需重装, 请先 jvm uninstall %s\n", finalName)
 		return nil
 	}
@@ -126,11 +126,11 @@ func Install(asset *app.Asset, name string) error {
 	cacheFile := filepath.Join(paths.CacheDir, finalName+".zip")
 
 	if cacheHit(cacheFile, asset) {
-		fmt.Printf("📦 将安装 %s %s\n", name, asset.Semver)
-		fmt.Println("📦 命中下载缓存, 跳过下载:", filepath.Base(cacheFile))
+		fmt.Printf("将安装 %s %s\n", name, asset.Semver)
+		fmt.Println("命中下载缓存, 跳过下载:", filepath.Base(cacheFile))
 	} else {
 		sizeMB := remoteSizeMB(asset.ZipURL)
-		fmt.Printf("📦 将安装 %s %s\n", name, asset.Semver)
+		fmt.Printf("将安装 %s %s\n", name, asset.Semver)
 		if sizeMB > 0 {
 			fmt.Printf("   大小约 %.1f MB\n", sizeMB)
 		}
@@ -139,18 +139,18 @@ func Install(asset *app.Asset, name string) error {
 		// (镜像/CDN 直链的解析已由 provider 适配器内化填入 asset, 这里只消费。
 		// 下载直接落到缓存路径, DownloadFile 的 .part→rename 语义保证只有完整
 		// 下载成功后才会出现最终 zip 文件。)
-		fmt.Print("🔗 解析下载地址...\n")
+		fmt.Print("解析下载地址...\n")
 		if asset.MirrorURL != "" {
 			if err := downloadWithFallback(cacheFile, asset.MirrorURL, asset.ZipURL); err != nil {
 				return fmt.Errorf("下载失败: %w", err)
 			}
 		} else {
-			fmt.Print("⬇️  下载 (无国内镜像, 直连官方源)...\n")
+			fmt.Print("下载 (无国内镜像, 直连官方源)...\n")
 			if err := download(asset.ZipURL, cacheFile); err != nil {
 				return fmt.Errorf("下载失败: %w", err)
 			}
 		}
-		fmt.Println("✅ 下载完成")
+		fmt.Println("下载完成")
 	}
 	zipPath := cacheFile
 
@@ -176,7 +176,7 @@ func Install(asset *app.Asset, name string) error {
 	if algo == "" {
 		algo = "sha256"
 	}
-	fmt.Printf("🔐 校验 %s... ", strings.ToUpper(algo))
+	fmt.Printf("校验 %s... ", strings.ToUpper(algo))
 	got, err := fileHash(zipPath, algo)
 	if err != nil {
 		os.Remove(zipPath)
@@ -194,7 +194,7 @@ func Install(asset *app.Asset, name string) error {
 		return err
 	}
 
-	fmt.Printf("\n✅ 安装完成: %s\n", finalName)
+	fmt.Printf("\n安装完成: %s\n", finalName)
 	fmt.Printf("   运行 `jvm use %d` 来切换到这个版本\n", asset.Major)
 	return nil
 }
@@ -203,7 +203,7 @@ func Install(asset *app.Asset, name string) error {
 // (topFolder, 发行版原始命名如 jdk-21.0.12+8) 重命名归一化为最终目录名
 // ({distro}-{ReleaseName})。被远程 Install 与本地 InstallLocal 共用。
 func extractAndPlace(zipPath, topFolder, finalName string) error {
-	fmt.Print("📂 解压中... ")
+	fmt.Print("解压中... ")
 	tmpExtract := filepath.Join(paths.Root, ".tmp-extract-"+topFolder)
 	os.RemoveAll(tmpExtract)
 	if err := unzipTo(zipPath, tmpExtract); err != nil {
@@ -268,11 +268,11 @@ func remoteSizeMB(url string) float64 {
 // downloadWithFallback 优先用镜像源, 失败则回退到官方源。
 // 续传模式下镜像→官方切换时保留 .part (两者内容一致, SHA256 相同, 可继续续传)。
 func downloadWithFallback(dest, mirrorURL, officialURL string) error {
-	fmt.Print("⬇️  尝试国内镜像...\n")
+	fmt.Print("尝试国内镜像...\n")
 	if err := download(mirrorURL, dest); err == nil {
 		return nil
 	}
-	fmt.Print("⚠️  国内镜像失败, 回退到官方源 (可能较慢)...\n")
+	fmt.Print("国内镜像失败, 回退到官方源 (可能较慢)...\n")
 	return download(officialURL, dest)
 }
 
@@ -320,9 +320,9 @@ func DownloadFile(url, dest string, opts ...DownloadOption) error {
 		if attempt > 0 {
 			backoff := time.Duration(1<<(attempt-1)) * time.Second // 1s, 2s, 4s...
 			if cfg.resume {
-				fmt.Printf("⚠️  下载中断/停滞, %v 后重试 (断点续传)...\n", backoff)
+				fmt.Printf("下载中断/停滞, %v 后重试 (断点续传)...\n", backoff)
 			} else {
-				fmt.Printf("⚠️  下载中断/停滞, %v 后重试...\n", backoff)
+				fmt.Printf("下载中断/停滞, %v 后重试...\n", backoff)
 			}
 			time.Sleep(backoff)
 		}
@@ -501,7 +501,7 @@ func (p *progressReader) Read(buf []byte) (int, error) {
 	}
 	if p.received-p.lastPrint >= step || (err != nil && p.received > p.lastPrint) {
 		pct := p.received * 100 / p.total
-		fmt.Printf("\r⬇️  下载中... %d%% (%.1f / %.1f MB)   ",
+		fmt.Printf("\r下载中... %d%% (%.1f / %.1f MB)   ",
 			pct, float64(p.received)/1024/1024, float64(p.total)/1024/1024)
 		p.lastPrint = p.received
 	}
