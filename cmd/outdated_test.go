@@ -97,6 +97,22 @@ func TestPrintOutdatedMixed(t *testing.T) {
 	if strings.Contains(out, "corretto@21") {
 		t.Errorf("已最新的组不应列出: %q", out)
 	}
+	// 单组落后不提示批量入口 (避免噪音)
+	if strings.Contains(out, "--all") {
+		t.Errorf("单组可升级不应提示 --all: %q", out)
+	}
+}
+
+func TestPrintOutdatedAllHint(t *testing.T) {
+	// 两组及以上落后 → 追加批量升级入口提示
+	rows := []outdatedRow{
+		{group: installedGroup{distro: "temurin", major: 21, localVer: "21.0.5+11"}, latest: "21.0.8+7"},
+		{group: installedGroup{distro: "corretto", major: 17, localVer: "17.0.10+9"}, latest: "17.0.12+8"},
+	}
+	out := captureStdout(t, func() { printOutdated(rows) })
+	if !strings.Contains(out, "jvm update --all") {
+		t.Errorf("两组可升级应提示 jvm update --all:\n%s", out)
+	}
 }
 
 // === Outdated() 全流程 (临时版本目录 + 可控 fake provider) ===

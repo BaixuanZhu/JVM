@@ -111,15 +111,15 @@ func Use(arg string) {
 	target := filepath.Join(paths.VersionsDir, dir)
 	display := junction.DisplayName(dir) // 归一化为 {distro}-{version} 展示
 
-	fmt.Printf("🔄 切换到 %s ...\n", display)
+	fmt.Printf("切换到 %s ...\n", display)
 	if err := switchTo(target); err != nil {
 		app.Fail(err.Error())
 	}
 	clearAutoState() // 显式切换即新的手动基线, 清掉自动切换的待恢复状态
 
-	fmt.Printf("✅ 已切换到 %s\n", display)
+	fmt.Printf("已切换到 %s\n", display)
 	fmt.Println()
-	fmt.Println("📌 已设置:")
+	fmt.Println("已设置:")
 	fmt.Printf("   JAVA_HOME = %s\n", paths.CurrentLink)
 	fmt.Printf("   PATH 中已包含 %s\n", filepath.Join(paths.CurrentLink, "bin"))
 	fmt.Println()
@@ -154,7 +154,7 @@ func Pin(arg string) {
 	if err := pinrc.Write(cwd, arg); err != nil {
 		app.Fail("写入 .jvmrc 失败: " + err.Error())
 	}
-	fmt.Printf("📌 已写入 %s\n", filepath.Join(cwd, pinrc.Filename))
+	fmt.Printf("已写入 %s\n", filepath.Join(cwd, pinrc.Filename))
 	fmt.Printf("   内容: %s\n", arg)
 	fmt.Println("在此目录运行 jvm use (无参数) 即切换到该版本。")
 }
@@ -170,10 +170,10 @@ func switchTo(targetDir string) error {
 		return err
 	}
 	if err := env.Persist("JAVA_HOME", paths.CurrentLink); err != nil {
-		fmt.Fprintf(os.Stderr, "⚠️  设置 JAVA_HOME 失败: %v\n", err)
+		fmt.Fprintf(os.Stderr, "设置 JAVA_HOME 失败: %v\n", err)
 	}
 	if err := env.EnsureCurrentInPath(); err != nil {
-		fmt.Fprintf(os.Stderr, "⚠️  设置 PATH 失败: %v\n", err)
+		fmt.Fprintf(os.Stderr, "设置 PATH 失败: %v\n", err)
 	}
 	return nil
 }
@@ -453,7 +453,7 @@ func availableTable(opts AvailableOptions, distro string) {
 		}
 	}
 	if !opts.JSON {
-		fmt.Printf("🔍 正在查询 %s 可安装的大版本 (并发获取最新版本号)...\n", p.DisplayName())
+		fmt.Printf("正在查询 %s 可安装的大版本 (并发获取最新版本号)...\n", p.DisplayName())
 	}
 	releases, err := p.Available()
 	if err != nil {
@@ -539,7 +539,7 @@ func availableGroups(opts AvailableOptions, distro string) {
 	}
 
 	if !opts.JSON {
-		fmt.Printf("🔍 正在查询 %s 可安装的子版本 (可能稍慢)...\n", p.DisplayName())
+		fmt.Printf("正在查询 %s 可安装的子版本 (可能稍慢)...\n", p.DisplayName())
 	}
 
 	// 取大版本列表 + LTS 标记 (单次 API; --major 场景也用它拿 LTS 标记)
@@ -858,18 +858,21 @@ func Uninstall(args []string) {
 	// 如果正在用这个版本, 先解除 current (删除后由 fallbackAfterRemoval 回退)
 	wasCurrent := currentDir() == dir
 	if wasCurrent {
-		fmt.Printf("⚠️  当前正在使用 %s, 先解除 current 链接...\n", dir)
+		fmt.Printf("当前正在使用 %s, 先解除 current 链接...\n", dir)
 		if err := junction.Remove(paths.CurrentLink); err != nil {
 			app.Fail("解除 current 失败: " + err.Error())
 		}
 	}
 
 	target := filepath.Join(paths.VersionsDir, dir)
-	fmt.Printf("🗑️  正在删除 %s ...\n", dir)
+	fmt.Printf("正在删除 %s ...\n", dir)
 	if err := os.RemoveAll(target); err != nil {
-		app.Fail("删除失败: " + err.Error())
+		// Windows 不允许删除已被运行中 JVM 加载的 DLL (extnet.dll 等): 常见占用方
+		// 是还没停的 java 进程。带原因与出口, 不让用户卡在裸错误上。
+		app.Fail("删除失败 (可能被运行中的 java 进程占用, 如 Gradle daemon / IDE / 应用;\n" +
+			"  停止相关进程后重试): " + err.Error())
 	}
-	fmt.Printf("✅ 已卸载 %s\n", dir)
+	fmt.Printf("已卸载 %s\n", dir)
 	if wasCurrent {
 		fallbackAfterRemoval()
 	}
@@ -945,9 +948,9 @@ func uninstallGroup(distro string, major int, assumeYes bool) {
 
 	var failed []string
 	for _, d := range dirs {
-		fmt.Printf("🗑️  正在删除 %s ...\n", d)
+		fmt.Printf("正在删除 %s ...\n", d)
 		if err := os.RemoveAll(filepath.Join(paths.VersionsDir, d)); err != nil {
-			fmt.Printf("⚠️  删除 %s 失败 (可能被进程占用)\n", d)
+			fmt.Printf("删除 %s 失败 (可能被进程占用)\n", d)
 			failed = append(failed, d)
 		}
 	}
@@ -956,10 +959,10 @@ func uninstallGroup(distro string, major int, assumeYes bool) {
 	}
 
 	if len(failed) > 0 {
-		fmt.Printf("⚠️  %d 个版本未能删除, 可稍后重试 (jvm uninstall %s@%d --all)\n", len(failed), distro, major)
+		fmt.Printf("%d 个版本未能删除, 可稍后重试 (jvm uninstall %s@%d --all)\n", len(failed), distro, major)
 		os.Exit(1)
 	}
-	fmt.Printf("✅ 已卸载 %s@%d 全部 %d 个版本\n", distro, major, len(dirs))
+	fmt.Printf("已卸载 %s@%d 全部 %d 个版本\n", distro, major, len(dirs))
 }
 
 // fallbackAfterRemoval 在删除了 current 指向的版本目录后调用: 重新枚举剩余
@@ -974,10 +977,10 @@ func fallbackAfterRemoval() {
 	}
 	target := names[0] // ListLocal 降序, 首个即全局语义最新
 	if err := switchTo(filepath.Join(paths.VersionsDir, target)); err != nil {
-		fmt.Printf("⚠️  回退失败: %v (可手动 jvm use 选择其他版本)\n", err)
+		fmt.Printf("回退失败: %v (可手动 jvm use 选择其他版本)\n", err)
 		return
 	}
-	fmt.Printf("↩️  已回退到剩余最新版本 %s\n", junction.DisplayName(target))
+	fmt.Printf("已回退到剩余最新版本 %s\n", junction.DisplayName(target))
 
 	if s := readAutoState(); s != "" {
 		for _, n := range names {
@@ -1018,7 +1021,7 @@ func Current() {
 	defer cancel()
 	out, err := exec.CommandContext(ctx, javaBin, "-version").CombinedOutput()
 	if err != nil {
-		fmt.Printf("⚠️  执行 java -version 失败: %v\n", err)
+		fmt.Printf("执行 java -version 失败: %v\n", err)
 		fmt.Printf("   可在新终端手动运行: \"%s\" -version\n", javaBin)
 		return
 	}

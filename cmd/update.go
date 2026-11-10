@@ -86,7 +86,7 @@ func Update(args []string) {
 		app.Fail(err.Error())
 	}
 
-	fmt.Printf("🔍 正在查询 %s %d 的最新 patch...\n", spec.Distro, major)
+	fmt.Printf("正在查询 %s %d 的最新 patch...\n", spec.Distro, major)
 	asset, err := p.LatestPatch(major)
 	if err != nil {
 		app.Fail(err.Error())
@@ -95,10 +95,10 @@ func Update(args []string) {
 	plan := buildUpdatePlan(group, spec.Distro, major, asset.ReleaseName, currentDir())
 	switch plan.status {
 	case planLocalNewer:
-		fmt.Printf("✅ %s@%d 已是最新 patch (%s, 比远端 %s 新)\n", plan.distro, plan.major, plan.group.latestVer, plan.latest)
+		fmt.Printf("%s@%d 已是最新 patch (%s, 比远端 %s 新)\n", plan.distro, plan.major, plan.group.latestVer, plan.latest)
 		return
 	case planUpToDate:
-		fmt.Printf("✅ %s@%d 已是最新 patch (%s)\n", plan.distro, plan.major, plan.latest)
+		fmt.Printf("%s@%d 已是最新 patch (%s)\n", plan.distro, plan.major, plan.latest)
 		return
 	}
 
@@ -132,7 +132,7 @@ func updateAll(assumeYes bool) {
 		return
 	}
 	groups := groupInstalled(names)
-	fmt.Printf("🔍 正在查询 %d 组已装版本的最新 patch (并发)...\n", len(groups))
+	fmt.Printf("正在查询 %d 组已装版本的最新 patch (并发)...\n", len(groups))
 
 	// 并发查每组的最新 GA (与 Outdated 同款 WaitGroup + 索引切片模式)
 	rows := make([]outdatedRow, len(groups))
@@ -168,7 +168,7 @@ func updateAll(assumeYes bool) {
 	}
 	if len(upgradable) == 0 {
 		reportSkippedGroups(failedRows)
-		fmt.Printf("✅ 已安装的 %d 组版本均为最新 patch。\n", len(rows)-len(failedRows))
+		fmt.Printf("已安装的 %d 组版本均为最新 patch。\n", len(rows)-len(failedRows))
 		return
 	}
 
@@ -203,17 +203,18 @@ func updateAll(assumeYes bool) {
 	for i, plan := range plans {
 		failedDirs, err := execUpdatePlan(plan, provs[i])
 		if err != nil {
-			fmt.Printf("⚠️  %s@%d 升级失败: %v\n\n", plan.distro, plan.major, err)
+			fmt.Printf("%s@%d 升级失败: %v\n\n", plan.distro, plan.major, err)
 			unhandled = append(unhandled, fmt.Sprintf("%s@%d (升级失败)", plan.distro, plan.major))
 			continue
 		}
 		okCount++
-		fmt.Printf("✅ %s@%d 已升级到 %s\n", plan.distro, plan.major, plan.latest)
+		fmt.Printf("%s@%d 已升级到 %s\n", plan.distro, plan.major, plan.latest)
 		if n := len(plan.toDelete) - len(failedDirs); n > 0 {
 			fmt.Printf("   已清理 %d 个旧版本\n", n)
 		}
 		if len(failedDirs) > 0 {
-			fmt.Printf("⚠️  %d 个旧版本未能删除, 稍后可 jvm uninstall 手动清理\n", len(failedDirs))
+			fmt.Printf("%d 个旧版本未能删除 (可能被运行中的 java 进程占用),\n"+
+				"   停止占用进程后可 jvm uninstall 手动清理\n", len(failedDirs))
 		}
 		fmt.Println()
 	}
@@ -221,7 +222,7 @@ func updateAll(assumeYes bool) {
 		unhandled = append(unhandled, fmt.Sprintf("%s@%d (查询失败, 跳过)", r.group.distro, r.group.major))
 	}
 
-	fmt.Printf("📦 升级完成: 成功 %d 组", okCount)
+	fmt.Printf("升级完成: 成功 %d 组", okCount)
 	if len(unhandled) > 0 {
 		fmt.Printf(", 未处理 %d 组 (%s)\n", len(unhandled), strings.Join(unhandled, ", "))
 		os.Exit(1) // 有未处理组, 非零退出供脚本感知
@@ -234,7 +235,7 @@ func reportSkippedGroups(failedRows []outdatedRow) {
 	if len(failedRows) == 0 {
 		return
 	}
-	fmt.Println("⚠️  查询失败 (跳过):")
+	fmt.Println("查询失败 (跳过):")
 	for _, r := range failedRows {
 		fmt.Printf("  %s@%d    检查 %s\n", r.group.distro, r.group.major, r.group.localVer)
 	}
@@ -298,7 +299,7 @@ func printUpdatePlan(p updatePlan) {
 func execUpdatePlan(p updatePlan, prov provider.Provider) ([]string, error) {
 	// 最新版已在组内 (outdated 信息过期或并列安装过) 则跳过下载直接清理。
 	if p.latestInstalled {
-		fmt.Println("📦 最新版已安装, 跳过下载, 直接清理旧版本")
+		fmt.Println("最新版已安装, 跳过下载, 直接清理旧版本")
 	} else if err := jdk.InstallVersion(prov, app.VersionSpec{Distro: p.distro, Version: p.latest}); err != nil {
 		return nil, err
 	}
@@ -313,7 +314,7 @@ func execUpdatePlan(p updatePlan, prov provider.Provider) ([]string, error) {
 	}
 	for _, d := range p.toDelete {
 		if d == current {
-			fmt.Printf("🔄 当前正在使用旧版本, 切换到 %s ...\n", p.newDir)
+			fmt.Printf("当前正在使用旧版本, 切换到 %s ...\n", p.newDir)
 			if err := switchTo(filepath.Join(paths.VersionsDir, p.newDir)); err != nil {
 				return nil, fmt.Errorf("切换失败 (新版已装好, 可手动 jvm use %d): %w", p.major, err)
 			}
@@ -326,9 +327,9 @@ func execUpdatePlan(p updatePlan, prov provider.Provider) ([]string, error) {
 	// 删不掉的跳过并警告, 不让整个升级失败 (同 upgrade.CleanupStaleBak 的宽容思路)。
 	var failed []string
 	for _, d := range p.toDelete {
-		fmt.Printf("🗑️  正在删除 %s ...\n", d)
+		fmt.Printf("正在删除 %s ...\n", d)
 		if err := os.RemoveAll(filepath.Join(paths.VersionsDir, d)); err != nil {
-			fmt.Printf("⚠️  删除 %s 失败 (可能被进程占用)\n", d)
+			fmt.Printf("删除 %s 失败 (可能被进程占用)\n", d)
 			failed = append(failed, d)
 		}
 	}
@@ -339,16 +340,17 @@ func execUpdatePlan(p updatePlan, prov provider.Provider) ([]string, error) {
 func printUpdateResult(p updatePlan, failed []string) {
 	fmt.Println()
 	if p.latestInstalled {
-		fmt.Printf("✅ %s@%d 已是最新 patch (%s), 并清理了 %d 个旧版本\n",
+		fmt.Printf("%s@%d 已是最新 patch (%s), 并清理了 %d 个旧版本\n",
 			p.distro, p.major, p.latest, len(p.toDelete)-len(failed))
 	} else {
-		fmt.Printf("✅ %s@%d 已升级到 %s\n", p.distro, p.major, p.latest)
+		fmt.Printf("%s@%d 已升级到 %s\n", p.distro, p.major, p.latest)
 		if n := len(p.toDelete) - len(failed); n > 0 {
 			fmt.Printf("   已清理 %d 个旧版本\n", n)
 		}
 	}
 	if len(failed) > 0 {
-		fmt.Printf("⚠️  %d 个旧版本未能删除, 稍后可 jvm uninstall 手动清理\n", len(failed))
+		fmt.Printf("%d 个旧版本未能删除 (可能被运行中的 java 进程占用),\n"+
+			"   停止占用进程后可 jvm uninstall 手动清理\n", len(failed))
 	} else if len(p.toDelete) > 0 {
 		fmt.Printf("   提示: 若项目 .jvmrc 钉的是完整版本号, 请同步更新 (建议钉大版本号, 如 %s@%d)\n",
 			p.distro, p.major)

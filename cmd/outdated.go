@@ -67,7 +67,7 @@ func Outdated(args []string) {
 	groups := groupInstalled(names)
 
 	if !jsonOut {
-		fmt.Printf("🔍 正在查询 %d 组已装版本的最新 patch (并发)...\n", len(groups))
+		fmt.Printf("正在查询 %d 组已装版本的最新 patch (并发)...\n", len(groups))
 	}
 
 	// 并发查每组的最新 GA (与 availableTable 同款 WaitGroup + 索引切片模式)
@@ -150,7 +150,7 @@ func printOutdated(rows []outdatedRow) {
 	}
 
 	if len(upgradable) == 0 && len(failed) == 0 {
-		fmt.Printf("✅ 已安装的 %d 组版本均为最新 patch。\n", len(rows))
+		fmt.Printf("已安装的 %d 组版本均为最新 patch。\n", len(rows))
 		return
 	}
 
@@ -163,10 +163,14 @@ func printOutdated(rows []outdatedRow) {
 		fmt.Println("升级: jvm update <distro@大版本>   例如: jvm update " +
 			upgradable[0].group.distro + "@" + itoa(upgradable[0].group.major))
 		fmt.Println("      (自动安装最新 patch, 切换并清理旧版本)")
+		// 多组落后时追加批量入口; 单组不加, 避免提示噪音
+		if len(upgradable) >= 2 {
+			fmt.Println("全部升级: jvm update --all   (一次确认, 升级以上全部)")
+		}
 	}
 	if len(failed) > 0 {
 		fmt.Println()
-		fmt.Println("⚠️  查询失败 (跳过):")
+		fmt.Println("查询失败 (跳过):")
 		for _, r := range failed {
 			fmt.Printf("  %s@%d    检查 %s\n", r.group.distro, r.group.major, r.group.localVer)
 		}
