@@ -58,3 +58,32 @@
 - jvm upgrade 自更新验收通过（用户执行 + 主控复核 jvm 0.16.0、无 .bak 残留）。
   子任务 1 全部验收项闭环；父任务集成验收 4/6，余两项锁在外部事件
   （winget PR #467355 合并 + 下次发版、scoop 线挂起）。
+
+## 2026-11-10 fix: 版本号收敛 + outdated 联动 + emoji 清理 (11-10-update-jdk8-fix-and-emoji-cleanup)
+
+用户报三问题: (1) `update temurin@8` 确认后报「无效的版本号: jdk8u512-b09」;
+(2) outdated 与 update --all 无联动提示; (3) 装饰性 emoji 冗余。过程中追加第
+四项: 版本被运行中 java 进程占用时 uninstall 裸报错、update 善后建议误导。
+
+**关键决策——收敛而非补丁**: 用户明确要求封装好、避免多点维护。盘点出
+「从版本串提大版本」12 处、「是否纯大版本号」5 份两种语义的重复实现;
+liberica 8 (`8u504+1`, 实测 BellSoft API) 同病且更阴 (isPureMajor「不含点」
+把精确版本误判成取最新)。方案: `internal/app/version.go` 三助手
+(IsPureMajor / MajorOfVersion / ParseMajorOfVersion) 单一事实源, 全 provider
+Resolve 统一二元路由废除格式枚举, junction 内部委托。spec 沉淀见
+`.trellis/spec/backend/version-parsing.md` (版本串形态注册表 = app 表测
+fixture)。注意 ✓(U+2713)/✗(U+2717)/✅(U+2705) 同处 Dingbats 区段, emoji
+清理必须按显式字符集处理。
+
+诊断备忘: `17.0.20+8` 无前缀目录是**永久容忍**态 (MigrateLegacyDirs 把纯
+semver 视为已是新规范, 不改 distro 前缀名); 「进程停止后自动改名」说法错误,
+裸 jdk-*/jdk8u* 目录才会迁移。Access is denied on extnet.dll = 运行中 JVM
+加载的 DLL 不可删 (rename 同样被锁, 暂存改名方案不成立)。
+
+验证: app 表测全形态 fixture; JVM_HOME 隔离实测 install temurin@jdk8u504-b01
+→ outdated → update temurin@8 闭环 + liberica@8u504+1 精确装; make
+fmt/vet/test 全绿; emoji 复扫仅剩 doctor ✓/✗。提交三笔:
+0db701a(fix provider) / ed29464(fix cmd) / 0e54f9b(style)。
+
+遗留: 用户机器 (Administrator) 需 `jvm upgrade` 后自测 temurin@8 升级;
+被占用的 17.0.20+8 停进程后 `jvm uninstall temurin-17.0.20+8` 即可。

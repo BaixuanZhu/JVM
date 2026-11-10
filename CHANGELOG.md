@@ -5,6 +5,36 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [Unreleased]
+
+### 修复
+
+- Temurin 8 系版本（`jdk8u512-b09` 形态，无小数点）升级与精确安装报
+  「无效的版本号」：`jvm update temurin@8` 确认后在安装步骤失败，
+  `jvm install jdk8uXXX-bYY` 同样触雷。根因是 provider 各自维护的版本号
+  路由逻辑按格式枚举分流，遇无点形态失配。本次将「是否纯大版本号」与
+  「从版本串提取大版本」收敛到 `internal/app` 单一事实源，全部 provider
+  的 `Resolve` 统一为二元判据（纯大版本号取最新，其余走精确版本路径），
+  不再枚举格式——后续新发行版、新命名形态无需再动路由。
+
+- Liberica 8 系（`8u504+1` 形态）同类问题且更隐蔽：精确版本号除报错外，
+  还会因「不含点即大版本号」的错误判据被误判为「取 8 系最新」，静默装错
+  版本。随上述收敛一并修复。
+
+- `jvm uninstall` 删除失败时裸报 `unlinkat ...: Access is denied.` 无从下手：
+  现提示可能被运行中的 java 进程（Gradle daemon / IDE / 应用）占用并建议
+  停止后重试；`jvm update`（单组与 `--all`）的「未能删除」汇总同步改为
+  该口径，不再误导用户「手动 uninstall 必能清理」。
+
+### 变更
+
+- `jvm outdated` 存在两组及以上落后版本时，提示追加批量升级入口
+  `jvm update --all`（单组时不追加）。
+
+- 全部 CLI 输出移除装饰性 emoji（🔍 ✅ ⚠️ 📦 等，约 120 处）：传统
+  Windows 控制台（GBK 代码页）下 emoji 显示为方块，纯文本对所有终端
+  一致友好。`jvm doctor` 的 `✓` / `✗` 逐项结果标记属功能性符号，保留。
+
 ## [0.16.0] - 2026-11-01
 
 ### 变更
