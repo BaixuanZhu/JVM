@@ -6,7 +6,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"jvm/internal/app"
 	"jvm/internal/paths"
@@ -248,5 +250,62 @@ func TestOutdatedJSONEmpty(t *testing.T) {
 	out := captureStdout(t, func() { Outdated([]string{"--json"}) })
 	if got := strings.TrimSpace(out); got != `{"groups":[]}` {
 		t.Errorf("空安装输出 = %q, 想 {\"groups\":[]}", got)
+	}
+}
+
+// TestOutdatedCacheReuse 验证 outdated 复用 LatestPatch 逐条缓存 (countingProvider
+// 计数网络调用): 同组二次调用 TTL 内零网络请求并附缓存说明行; 拨旧时间戳 /
+// 换 arch 后重新查询并回填。
+func TestOutdatedCacheReuse(t *testing.T) {
+	root := withTempVersions(t)
+	name := "fakeodcache" + t.Name()
+	if err := os.MkdirAll(filepath.Join(root, "versions", name+"-21.0.5+11"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	p := &countingProvider{name: name}
+	provider.Register(p)
+
+	out1 := captureStdout(t, func() { Outdated(nil) })
+	if n := atomic.LoadInt32(&p.calls); n != 1 {
+		t.Fatalf("首次查询 LatestPatch 调用 %d 次, 想 1", n)
+	}
+	if strings.Contains(out1, "缓存") {
+		t.Errorf("首查不应有缓存说明行:\n%s", out1)
+	}
+
+	// TTL 内二次调用: 零网络请求, 人类输出附缓存说明行
+	out2 := captureStdout(t, func() { Outdated(nil) })
+	if n := atomic.LoadInt32(&p.calls); n != 1 {
+		t.Errorf("TTL 内二次查询应零网络请求, 实际又调了 %d 次", n-1)
+	}
+	if !strings.Contains(out2, "缓存") {
+		t.Errorf("全部命中缓存应附说明行:\n%s", out2)
+	}
+
+	// 拨旧 patch 条目时间戳 → 过期重查并回填
+	rewriteCacheFile(t, func(c *availableCache) {
+		key := groupCacheKey(name, 21)
+		e := c.Patches[key]
+		e.SavedAt = time.Now().UTC().Add(-availableCacheTTL - time.Minute).Format(time.RFC3339)
+		c.Patches[key] = e
+	})
+	captureStdout(t, func() { Outdated(nil) })
+	if n := atomic.LoadInt32(&p.calls); n != 2 {
+		t.Errorf("TTL 过期后应重新查询, 实际共 %d 次", n)
+	}
+	captureStdout(t, func() { Outdated(nil) })
+	if n := atomic.LoadInt32(&p.calls); n != 2 {
+		t.Errorf("重查回填后应再次命中缓存, 实际共 %d 次", n)
+	}
+
+	// 换 arch → 条目整体失效, 重新查询
+	other := app.ArchX64
+	if cacheArchKey() == app.ArchX64 {
+		other = app.ArchARM64
+	}
+	rewriteCacheFile(t, func(c *availableCache) { c.Arch = other })
+	captureStdout(t, func() { Outdated(nil) })
+	if n := atomic.LoadInt32(&p.calls); n != 3 {
+		t.Errorf("换 arch 后应重新查询, 实际共 %d 次", n)
 	}
 }

@@ -1,8 +1,10 @@
 // 本文件实现 jvm outdated 子命令: 检查本地已装版本是否有新 patch 可升级。
 //
 // JDK 季度安全更新是刚需, 本命令扫 ~/.jvm/versions 全部 (发行版, 大版本) 组合,
-// 并发查各 provider 的 LatestPatch, 列出落后行并提示用 jvm update 一键升级
-// (update 负责装新 → 切换 → 清理旧版的完整闭环)。
+// 并发查各 provider 的 LatestPatch (经 available 同一份 distro@major 逐条缓存,
+// 见 available_cache.go 的 queryLatestPatches/patchOf, TTL 内二次检查零网络),
+// 列出落后行并提示用 jvm update 一键升级 (update 负责装新 → 切换 → 清理旧版
+// 的完整闭环)。
 package cmd
 
 import (
@@ -70,27 +72,7 @@ func Outdated(args []string) {
 		fmt.Printf("正在查询 %d 组已装版本的最新 patch (并发)...\n", len(groups))
 	}
 
-	// 并发查每组的最新 GA (与 availableTable 同款 WaitGroup + 索引切片模式)
-	rows := make([]outdatedRow, len(groups))
-	var wg sync.WaitGroup
-	for i, g := range groups {
-		wg.Add(1)
-		go func(i int, g installedGroup) {
-			defer wg.Done()
-			row := outdatedRow{group: g}
-			if p, err := provider.Get(g.distro); err == nil {
-				if asset, e := p.LatestPatch(g.major); e == nil {
-					row.latest = asset.ReleaseName
-				} else {
-					row.failed = true
-				}
-			} else {
-				row.failed = true // 目录名解析出未注册的 distro, 极少见
-			}
-			rows[i] = row
-		}(i, g)
-	}
-	wg.Wait()
+	rows, allCached := queryLatestPatches(groups)
 
 	if jsonOut {
 		out := outdatedOutput{Groups: make([]outdatedEntry, 0, len(rows))}
@@ -108,6 +90,55 @@ func Outdated(args []string) {
 		return
 	}
 	printOutdated(rows)
+	if allCached {
+		// 全部组命中缓存 (本次零网络请求) 时说明数据来源;
+		// 部分命中不附, 避免噪音。
+		fmt.Println(cacheNoticeLine())
+	}
+}
+
+// queryLatestPatches 检查全部 (发行版, 大版本) 组的最新 patch, 是 Outdated 与
+// update --all 共用的查询外壳 (原先两处整段同构的并发块收敛于此): 逐组先试
+// LatestPatch 逐条缓存 (TTL 内命中零网络), miss 的组并发直查并回填 (patchOf)。
+// 行序与输入一致; 第二返回值表示全部组均命中缓存 (本次零网络请求), 供调用方
+// 打缓存说明行。
+func queryLatestPatches(groups []installedGroup) ([]outdatedRow, bool) {
+	rows := make([]outdatedRow, len(groups))
+	allCached := true
+	var missIdx []int
+	for i, g := range groups {
+		rows[i] = outdatedRow{group: g}
+		if v, ok := loadPatchCache(g.distro, g.major); ok {
+			rows[i].latest = v
+			continue
+		}
+		allCached = false
+		missIdx = append(missIdx, i)
+	}
+	if len(missIdx) == 0 {
+		return rows, allCached
+	}
+
+	// miss 组并发直查 (与 availableTable 同款 WaitGroup + 索引切片模式);
+	// 缓存已在上方串行试过且 miss, patchOf 传 useCache=false 免二次读。
+	var wg sync.WaitGroup
+	for _, i := range missIdx {
+		wg.Add(1)
+		go func(i int, g installedGroup) {
+			defer wg.Done()
+			if p, err := provider.Get(g.distro); err == nil {
+				if v, e := patchOf(p, g.major, false); e == nil {
+					rows[i].latest = v
+				} else {
+					rows[i].failed = true
+				}
+			} else {
+				rows[i].failed = true // 目录名解析出未注册的 distro, 极少见
+			}
+		}(i, groups[i])
+	}
+	wg.Wait()
+	return rows, allCached
 }
 
 // groupInstalled 把本地版本目录按 (发行版, 大版本) 分组, 每组保留语义最新的一个。

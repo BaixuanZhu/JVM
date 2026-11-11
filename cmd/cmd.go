@@ -440,16 +440,30 @@ func availableTable(opts AvailableOptions, distro string) {
 	if err != nil {
 		app.Fail(err.Error())
 	}
+	// 整表命中判据: 骨架表 (major+LTS) 命中且全部行的 LatestPatch 逐条缓存
+	// 命中 → 零网络直接出表; 任一 miss 走下方查询路径 (骨架重取一次轻量的
+	// Available, patch 由 patchOf 增量复用已命中的条目)。
 	if !opts.Refresh {
 		if rows, ok := loadTableCache(distro); ok {
-			if opts.JSON {
-				app.PrintJSON(rowsToJSON(distro, p.DisplayName(), rows))
+			hit := true
+			for i := range rows {
+				latest, ok := loadPatchCache(distro, rows[i].major)
+				if !ok {
+					hit = false
+					break
+				}
+				rows[i].latest = latest
+			}
+			if hit {
+				if opts.JSON {
+					app.PrintJSON(rowsToJSON(distro, p.DisplayName(), rows))
+					return
+				}
+				printAvailableTable(rows, p.DisplayName())
+				fmt.Println(cacheNoticeLine())
+				printAvailableHints(p)
 				return
 			}
-			printAvailableTable(rows, p.DisplayName())
-			fmt.Println(cacheNoticeLine())
-			printAvailableHints(p)
-			return
 		}
 	}
 	if !opts.JSON {
@@ -468,7 +482,7 @@ func availableTable(opts AvailableOptions, distro string) {
 		return
 	}
 
-	// 并发查每个大版本的最新 GA 版本号
+	// 并发查每个大版本的最新 GA 版本号 (patchOf 读逐条缓存, miss 才走网络)
 	rows := make([]availableRow, len(releases))
 	var wg sync.WaitGroup
 	for i, r := range releases {
@@ -477,8 +491,8 @@ func availableTable(opts AvailableOptions, distro string) {
 			defer wg.Done()
 			row := availableRow{major: r.Major, lts: r.LTS}
 			// LatestPatch 只取该 major 最新一条, 比 Resolve 轻量 (不解析用户输入/不内化 CDN)
-			if asset, e := p.LatestPatch(r.Major); e == nil {
-				row.latest = asset.ReleaseName
+			if v, e := patchOf(p, r.Major, !opts.Refresh); e == nil {
+				row.latest = v
 			} else {
 				row.failed = true
 			}
@@ -492,26 +506,16 @@ func availableTable(opts AvailableOptions, distro string) {
 		rows[i], rows[j] = rows[j], rows[i]
 	}
 
-	// 全部成功才落缓存 (failed 行被 TTL 固化会让 ✗ 状态最长滞留一个周期)
-	if !rowsAnyFailed(rows) {
-		saveTableCache(distro, rows)
-	}
+	// 骨架表整表落缓存 (骨架来自成功的 Available(), 无 failed 概念); 行内
+	// latest 已由 patchOf 按查询成败逐条落 Patches —— 两类数据分开, failed
+	// 行不再拖累整表 (原先"全部成功才落缓存"的判据随之废除)。
+	saveTableCache(distro, rows)
 	if opts.JSON {
 		app.PrintJSON(rowsToJSON(distro, p.DisplayName(), rows))
 		return
 	}
 	printAvailableTable(rows, p.DisplayName())
 	printAvailableHints(p)
-}
-
-// rowsAnyFailed 判断表格行里是否有查询失败的 major。
-func rowsAnyFailed(rows []availableRow) bool {
-	for _, r := range rows {
-		if r.failed {
-			return true
-		}
-	}
-	return false
 }
 
 // availableGroups 按 -a / --major 分组列出全部子版本。

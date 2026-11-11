@@ -1,8 +1,14 @@
 package cmd
 
 import (
+	"os"
+	"path/filepath"
 	"reflect"
+	"strings"
+	"sync/atomic"
 	"testing"
+
+	"jvm/internal/provider"
 )
 
 func TestParseUpdateArgs(t *testing.T) {
@@ -157,4 +163,30 @@ func TestBuildUpdatePlan(t *testing.T) {
 			t.Errorf("status=%v latestInstalled=%v, 想 planUpgrade + false (换规范名目录)", p.status, p.latestInstalled)
 		}
 	})
+}
+
+// TestUpdateSingleGroupCache 验证 update 单组的最新 patch 查询走 patchOf 逐条
+// 缓存 (countingProvider 计数网络调用): 幂等场景 (本地即远端最新, 不触发确认)
+// TTL 内二次执行零网络请求。
+func TestUpdateSingleGroupCache(t *testing.T) {
+	root := withTempVersions(t)
+	name := "fakeupcache" + t.Name()
+	if err := os.MkdirAll(filepath.Join(root, "versions", name+"-21.0.1+1"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	p := &countingProvider{name: name}
+	provider.Register(p)
+
+	out := captureStdout(t, func() { Update([]string{name + "@21"}) })
+	if n := atomic.LoadInt32(&p.calls); n != 1 {
+		t.Fatalf("首次查询 LatestPatch 调用 %d 次, 想 1", n)
+	}
+	if !strings.Contains(out, "已是最新") {
+		t.Errorf("本地即远端最新应走幂等出口:\n%s", out)
+	}
+
+	captureStdout(t, func() { Update([]string{name + "@21"}) })
+	if n := atomic.LoadInt32(&p.calls); n != 1 {
+		t.Errorf("TTL 内二次执行应读缓存零网络请求, 实际又调了 %d 次", n-1)
+	}
 }

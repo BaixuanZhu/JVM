@@ -16,6 +16,7 @@ This directory contains guidelines for backend development. Fill in each file wi
 |-------|-------------|--------|
 | [Release Pipeline](./release-pipeline.md) | GoReleaser hybrid pipeline: asset name contract, goreleaser gotchas, snapshot verification protocol | Filled |
 | [Version Parsing](./version-parsing.md) | Single source of truth for version-string helpers, Resolve routing rule, real-world form registry | Filled |
+| [Query Cache](./query-cache.md) | available-cache.json contract: patchOf as the sole LatestPatch entry, key/entry rules, locking, no-local-state rule | Filled |
 | [Directory Structure](./directory-structure.md) | Module organization and file layout | To fill |
 | [Database Guidelines](./database-guidelines.md) | ORM patterns, queries, migrations | To fill |
 | [Error Handling](./error-handling.md) | Error types, handling strategies | To fill |

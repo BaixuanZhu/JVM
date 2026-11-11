@@ -7,6 +7,15 @@
 
 ## [Unreleased]
 
+### 变更
+
+- `jvm outdated` / `jvm update`（单组与 `--all`）的最新 patch 查询复用
+  `available` 的查询缓存：缓存粒度从「表格整表」细化到 `distro@大版本`
+  逐条（表格骨架仍按 distro 整表存），10 分钟 TTL 内 `available →
+  outdated → update` 同一批查询只打一次网络，二次检查零请求。
+  全部组命中缓存时 `outdated` 人类输出末尾附缓存来源说明行
+  （`--json` 输出不变）。
+
 ## [0.16.1] - 2026-11-10
 
 ### 修复

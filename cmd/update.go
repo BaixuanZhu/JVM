@@ -14,7 +14,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	"jvm/internal/app"
 	"jvm/internal/jdk"
@@ -52,7 +51,8 @@ type updatePlan struct {
 }
 
 // Update 处理 jvm update <[distro@]大版本> [-y|--yes] 与 jvm update --all [-y|--yes]。
-// 单组流程: 查最新 patch → 打印计划并确认 → 安装 (组内已有最新版则跳过下载) →
+// 单组流程: 查最新 patch (patchOf 走 distro@major 逐条缓存, 与 outdated/available
+// 共用, TTL 内零网络) → 打印计划并确认 → 安装 (组内已有最新版则跳过下载) →
 // 条件切换 → 删除旧目录; --all 见 updateAll。
 func Update(args []string) {
 	arg, all, assumeYes, err := parseUpdateArgs(args)
@@ -87,12 +87,12 @@ func Update(args []string) {
 	}
 
 	fmt.Printf("正在查询 %s %d 的最新 patch...\n", spec.Distro, major)
-	asset, err := p.LatestPatch(major)
+	latest, err := patchOf(p, major, true)
 	if err != nil {
 		app.Fail(err.Error())
 	}
 
-	plan := buildUpdatePlan(group, spec.Distro, major, asset.ReleaseName, currentDir())
+	plan := buildUpdatePlan(group, spec.Distro, major, latest, currentDir())
 	switch plan.status {
 	case planLocalNewer:
 		fmt.Printf("%s@%d 已是最新 patch (%s, 比远端 %s 新)\n", plan.distro, plan.major, plan.group.latestVer, plan.latest)
@@ -134,27 +134,8 @@ func updateAll(assumeYes bool) {
 	groups := groupInstalled(names)
 	fmt.Printf("正在查询 %d 组已装版本的最新 patch (并发)...\n", len(groups))
 
-	// 并发查每组的最新 GA (与 Outdated 同款 WaitGroup + 索引切片模式)
-	rows := make([]outdatedRow, len(groups))
-	var wg sync.WaitGroup
-	for i, g := range groups {
-		wg.Add(1)
-		go func(i int, g installedGroup) {
-			defer wg.Done()
-			row := outdatedRow{group: g}
-			if p, err := provider.Get(g.distro); err == nil {
-				if asset, e := p.LatestPatch(g.major); e == nil {
-					row.latest = asset.ReleaseName
-				} else {
-					row.failed = true
-				}
-			} else {
-				row.failed = true // 目录名解析出未注册的 distro, 极少见
-			}
-			rows[i] = row
-		}(i, g)
-	}
-	wg.Wait()
+	// 与 outdated 同款数据链路 (含逐条缓存), 见 outdated.go 的 queryLatestPatches
+	rows, _ := queryLatestPatches(groups)
 
 	// 分拣: 落后组进升级计划, 查询失败组跳过并在末尾汇总提示。
 	var upgradable, failedRows []outdatedRow
