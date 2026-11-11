@@ -36,15 +36,26 @@ exec 未装提示 install、install 命中下载缓存) 不动, 本任务只补�
 
 ## 跨子任务验收
 
-- [ ] `make fmt` / `make vet` / `make test` 全绿 (每子任务收口时各自保证, 父任务
-      归档前整仓再跑一遍)。
-- [ ] CHANGELOG.md `[Unreleased]` 记录全部用户可见变更 (缓存行为、available 新列
-      与 --json 新字段、uninstall/update 缓存处理、提示文案)。
-- [ ] AGENTS.md 同步: available 缓存描述 (逐条粒度 + outdated/update 复用)、
-      update/uninstall 的缓存 zip 行为、cache 命令描述。
-- [ ] 评估 scripts/integration-test.sh: outdated→update 缓存复用路径与 uninstall
-      缓存询问分支是否补用例 (至少记录手测结论)。
-- [ ] 最终集成审视: 四个子任务合并后的命令面行为一次过检 (父任务收口职责)。
+- [x] `make fmt` / `make vet` / `make test` 全绿 (每子任务收口时各自保证, 父任务
+      归档前整仓再跑一遍 + `go test -race ./cmd/` 全绿, 2026-11-11)。
+- [x] CHANGELOG.md `[Unreleased]` 记录全部用户可见变更: 缓存复用 (变更)、available
+      已装列与 --json installed (新增)、uninstall 询问清缓存 (新增) + update 顺带
+      清理 (变更)、pin/use 提示 (变更)。
+- [x] AGENTS.md 同步: available 缓存描述 (逐条粒度 + outdated/update 复用 + 已装
+      标记)、update/uninstall 缓存 zip 行为、internal/jdk 下载缓存段的命名约定
+      双向指针。
+- [x] scripts/integration-test.sh 评估并改造: 15 段重构为缓存 zip 生命周期闭环
+      (uninstall -y 保留 → 重装命中缓存 → update 顺带清旧 zip 断言), 新增
+      `echo y |` 交互式 uninstall 用例 (第二问读 EOF 默认 N → 保留提示)。
+- [x] 最终集成审视: 子任务4 质检在 1-3 已合入 + 4 未提交的合并态上以真实二进制
+      实跑 (pin/use/exec 三命令、stderr diff 逐字节比对), 即合并过检。
+
+## 收口记录 (2026-11-11)
+
+四个子任务全部实施-质检-提交-归档, feat 提交: 7e53c0c (LatestPatch 缓存统一) /
+18e0aa2 (available 已装标记) / c5cb724 (缓存清理联动) / 250a392 (pin/use 提示统一)。
+spec 沉淀: .trellis/spec/backend/query-cache.md (patchOf 唯一入口等 5 条硬性契约)。
+质检共抓出 1 个 P0 (集成脚本 15 段前提失效) 已返工, 其余 P2 均已当场补齐或记录。
 
 ## 范围外 (明确不做)
 
