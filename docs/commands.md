@@ -23,16 +23,18 @@ jvm uninstall corretto@21 --all   # 批量卸载 corretto 21 组的全部已装 
 
 本地 zip 安装不访问网络、不做远程校验和校验（本地文件由你负责），安装后的目录命名与远程安装完全一致，`use` / `uninstall` / `outdated` 等命令照常工作。`--all` 只接受大版本号：先打印删除计划（标注在用版本）再一次确认，某目录被进程占用删不掉不阻断其余，末尾汇总、有失败时非零退出。
 
+卸载删除版本目录后，若下载缓存里留有对应的安装包 zip，会**询问是否顺带删除**（单版本展示文件名与大小；`--all` 组卸载合并为一次询问，列出全部 zip 与合计大小）。答 N 或 `-y` 时保留，并提示缓存个数、大小与 `jvm cache clean` 清理出口。
+
 ## 升级
 
 ```powershell
-jvm outdated                # 检查已装版本的 patch 更新，列出可升级行
+jvm outdated                # 检查已装版本的 patch 更新，列出可升级行（10 分钟内复用缓存零网络）
 jvm update 21               # 升级 temurin 21：装最新 patch → 条件切换 → 清理旧版
 jvm update corretto@21 -y   # 升级指定发行版的大版本，跳过确认
 jvm update --all            # 一条命令升级全部落后的 (发行版, 大版本) 组
 ```
 
-`update` 只接受大版本号（patch 全自动）：正在使用该组版本时自动切换到新版；被进程占用删不掉的旧目录会跳过并提示稍后手动 `uninstall`。`update --all` 与 `outdated` 同源检查，汇总各组计划后**一次确认**，某组失败不阻断其余组。`jvm upgrade` 是另一回事——它只更新 jvm 自身。
+`update` 只接受大版本号（patch 全自动）：正在使用该组版本时自动切换到新版；被进程占用删不掉的旧目录会跳过并提示稍后手动 `uninstall`；删除旧目录时**顺带清理**旧版与旧 patch 的安装包缓存 zip（失败宽容，不影响升级结果）。`update --all` 与 `outdated` 同源检查，汇总各组计划后**一次确认**，某组失败不阻断其余组。`jvm upgrade` 是另一回事——它只更新 jvm 自身。
 
 ## 项目版本固定（.jvmrc）
 
@@ -53,7 +55,7 @@ jvm use                     # 无参数：从当前目录逐级向上找 .jvmrc 
 | `.tool-versions` | asdf / mise | `java temurin-21.0.2+11` |
 | `.sdkmanrc` | sdkman | `java=21.0.2-tem` |
 
-这些生态的版本号普遍不含 build 号，外来格式按"先精确、失败降级为大版本组内最新"宽松匹配已装版本；`.jvmrc` 自身与显式命令参数保持严格语义。`jvm pin` 仍只写 `.jvmrc`。
+这些生态的版本号普遍不含 build 号，外来格式按"先精确、失败降级为大版本组内最新"宽松匹配已装版本；`.jvmrc` 自身与显式命令参数保持严格语义。`jvm pin` 仍只写 `.jvmrc`，固定未安装的版本时警告提示（不阻断写入，版本号可能是笔误）。
 
 配合 shell 集成 v3，cd 进含版本固定文件的目录会**自动切换**，cd 出去恢复原版本（详见[配置与原理]({{ '/docs/config/' | relative_url }})）。不支持自动切换的场景（如 CMD）用无参数 `jvm use` 即可。
 
@@ -71,7 +73,7 @@ jvm exec -- mvn test            # 无版本号：读 .jvmrc，再退到当前版
 
 ```powershell
 jvm list                    # 已安装版本（→ 标记当前）
-jvm available               # 可安装的大版本（标记 LTS；结果缓存 10 分钟）
+jvm available               # 可安装的大版本（标记 LTS 与本地已装；结果缓存 10 分钟）
 jvm available corretto      # 查看 corretto 可安装版本
 jvm available -a            # 列出每个大版本的全部子版本
 jvm available --major 21    # 只看 JDK 21 的全部子版本
@@ -86,7 +88,7 @@ jvm cache clean             # 清空下载缓存（含中断残留的 .part 分�
 jvm cache clean --older-than 30d   # 只清修改于 30 天前的缓存文件
 ```
 
-`available` 的查询结果按条目本地缓存 10 分钟（`~/.jvm/available-cache.json`），二次查询不再实时打全部发行版 API；命中时输出会标注 `⚡ 缓存结果`。目标架构（`arch` 配置）变化时缓存自动整体失效。
+`available` 的查询结果按条目本地缓存 10 分钟（`~/.jvm/available-cache.json`），二次查询不再实时打全部发行版 API；命中时输出会标注 `⚡ 缓存结果`。`outdated` / `update` 的最新 patch 查询复用**同一份缓存**（粒度细化到 `distro@大版本` 逐条），10 分钟内二次检查零网络请求。目标架构（`arch` 配置）变化时缓存自动整体失效；「已装」标记渲染时现算、不进缓存，安装/卸载后即时反映。
 
 ### 机器可读输出（--json）
 
