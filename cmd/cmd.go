@@ -249,12 +249,13 @@ func List(args []string) {
 	}
 }
 
-// availableRow 是表格里的一行: 每个大版本最新 GA 的简短版本号 + LTS 标记
+// availableRow 是表格里的一行: 每个大版本最新 GA 的简短版本号 + LTS 标记 + 本地已装
 type availableRow struct {
-	major  int
-	latest string // 简短版本号 "21.0.12+8"; 查询失败留空
-	failed bool   // 该大版本查询是否失败
-	lts    bool
+	major     int
+	latest    string // 简短版本号 "21.0.12+8"; 查询失败留空
+	failed    bool   // 该大版本查询是否失败
+	lts       bool
+	installed string // 该 (distro, major) 本地最新已装版本号; 未装留空 (渲染时现算的本地叠加, 不进缓存)
 }
 
 // AvailableOptions 是 jvm available 的选项 (由 ParseAvailableArgs 解析)。
@@ -332,18 +333,20 @@ func ParseAvailableArgs(args []string) (AvailableOptions, error) {
 
 // versionGroup 是分组输出里一个大版本的全部子版本 (已规整, 降序)。
 type versionGroup struct {
-	major    int
-	lts      bool
-	versions []string
-	failed   bool // 查询失败时为 true, versions 为空
+	major     int
+	lts       bool
+	versions  []string
+	failed    bool     // 查询失败时为 true, versions 为空
+	installed []string // 组内已装子版本 (降序, 未装 nil); 渲染时现算的本地叠加, 不进缓存
 }
 
 // rowJSON 是 --json 表格形态的一行 (availableRow 的序列化镜像)。
 type rowJSON struct {
-	Major  int    `json:"major"`
-	Latest string `json:"latest"` // 简短版本号; 查询失败留空
-	LTS    bool   `json:"lts"`
-	Failed bool   `json:"failed"`
+	Major     int    `json:"major"`
+	Latest    string `json:"latest"` // 简短版本号; 查询失败留空
+	LTS       bool   `json:"lts"`
+	Failed    bool   `json:"failed"`
+	Installed string `json:"installed"` // 该 (distro, major) 本地最新已装版本号; 未装空串
 }
 
 // tableOutput 是 jvm available --json 表格形态 (每个大版本最新 GA) 的顶层输出。
@@ -355,10 +358,11 @@ type tableOutput struct {
 
 // groupJSON 是 --json 分组形态的一组 (versionGroup 的序列化镜像)。
 type groupJSON struct {
-	Major    int      `json:"major"`
-	LTS      bool     `json:"lts"`
-	Versions []string `json:"versions"` // 全部子版本 (降序); 失败组为 []
-	Failed   bool     `json:"failed"`
+	Major     int      `json:"major"`
+	LTS       bool     `json:"lts"`
+	Versions  []string `json:"versions"` // 全部子版本 (降序); 失败组为 []
+	Failed    bool     `json:"failed"`
+	Installed []string `json:"installed"` // 组内已装子版本列表 (降序); 未装为 []
 }
 
 // groupsOutput 是 jvm available --json 分组形态 (-a / --major) 的顶层输出。
@@ -377,16 +381,18 @@ func rowsToJSON(distro, displayName string, rows []availableRow) tableOutput {
 	}
 	for _, r := range rows {
 		out.Rows = append(out.Rows, rowJSON{
-			Major:  r.major,
-			Latest: r.latest,
-			LTS:    r.lts,
-			Failed: r.failed,
+			Major:     r.major,
+			Latest:    r.latest,
+			LTS:       r.lts,
+			Failed:    r.failed,
+			Installed: r.installed,
 		})
 	}
 	return out
 }
 
-// groupsToJSON 把分组结果转为 --json 输出结构 (失败组的 nil versions 规范化为 [])。
+// groupsToJSON 把分组结果转为 --json 输出结构 (nil 的 versions / installed
+// 一并规范化为 [], 消费方拿到的恒是数组而非 null)。
 // 纯函数, 便于表驱动测试。
 func groupsToJSON(distro, displayName string, groups []versionGroup) groupsOutput {
 	out := groupsOutput{
@@ -399,11 +405,16 @@ func groupsToJSON(distro, displayName string, groups []versionGroup) groupsOutpu
 		if versions == nil {
 			versions = []string{}
 		}
+		installed := g.installed
+		if installed == nil {
+			installed = []string{}
+		}
 		out.Groups = append(out.Groups, groupJSON{
-			Major:    g.major,
-			LTS:      g.lts,
-			Versions: versions,
-			Failed:   g.failed,
+			Major:     g.major,
+			LTS:       g.lts,
+			Versions:  versions,
+			Failed:    g.failed,
+			Installed: installed,
 		})
 	}
 	return out
@@ -413,6 +424,8 @@ func groupsToJSON(distro, displayName string, groups []versionGroup) groupsOutpu
 // 无 flag 时以表格列出每个大版本的最新 GA; -a/--major 时按大版本分组列出全部子版本。
 // distro 位置参数指定发行版 (空 = 默认 temurin)。查询结果经本地缓存加速
 // (见 available_cache.go), -r 强制刷新; --json 输出同数据的机器可读 JSON。
+// 本地已装版本在三种输出形态中同步标记 (表格"已装"列 / 分组 (已装) 后缀 /
+// --json installed 字段), 标记渲染时现算, 不进缓存 —— 本地装/卸即时反映。
 func Available(opts AvailableOptions) {
 	distro := opts.Distro
 	if distro == "" {
@@ -425,6 +438,56 @@ func Available(opts AvailableOptions) {
 	availableTable(opts, distro)
 }
 
+// installedIndex 是 available 渲染时叠加"已装"标记用的本地安装索引: 本地版本
+// 目录按 (发行版, 大版本) 归组, 组内首个 (ListLocal 降序输出) 即该组本地语义
+// 最新。表格/分组/--json 三渲染共用一份, 避免重复 ListLocal。缓存条目是纯远端
+// 数据, 本索引每次渲染时现算 —— 本地装/卸即时反映, 不受 TTL 影响
+// (query-cache 规范: 缓存里禁止放本地状态)。
+type installedIndex struct {
+	latest  map[string]string   // groupCacheKey(distro, major) → 组内最新已装版本号
+	members map[string][]string // groupCacheKey(distro, major) → 组内全部已装版本号 (降序)
+}
+
+// buildInstalledIndex 把本地版本目录名列表 (ListLocal 的降序输出) 归并为
+// installedIndex: SplitDistro 拆发行版 (旧无前缀目录归 temurin, 与 list 展示
+// 口径一致), MajorOf 取大版本。纯函数, 便于表驱动测试。
+func buildInstalledIndex(names []string) installedIndex {
+	idx := installedIndex{
+		latest:  map[string]string{},
+		members: map[string][]string{},
+	}
+	for _, n := range names {
+		distro, ver := junction.SplitDistro(n)
+		major := junction.MajorOf(n)
+		if major == 0 {
+			continue // 非版本目录 (如解压残留), 跳过 (与 groupInstalled 同口径)
+		}
+		key := groupCacheKey(distro, major)
+		if _, ok := idx.latest[key]; !ok {
+			idx.latest[key] = ver // 降序输入, 组内首个即语义最新
+		}
+		idx.members[key] = append(idx.members[key], ver)
+	}
+	return idx
+}
+
+// latestInstalled 返回该 (发行版, 大版本) 组本地最新的已装版本号, 未装返回空串。
+func (idx installedIndex) latestInstalled(distro string, major int) string {
+	return idx.latest[groupCacheKey(distro, major)]
+}
+
+// installedMembers 返回该组全部已装版本号 (降序), 未装返回 nil。
+func (idx installedIndex) installedMembers(distro string, major int) []string {
+	return idx.members[groupCacheKey(distro, major)]
+}
+
+// localInstalledIndex 扫一次本地版本目录构建 installedIndex (availableTable 与
+// availableGroups 渲染叠加"已装"标记的共用入口)。
+func localInstalledIndex() installedIndex {
+	names, _ := junction.ListLocal()
+	return buildInstalledIndex(names)
+}
+
 // printAvailableHints 打印表格形态的尾部安装提示 (直查与缓存命中路径共用)。
 func printAvailableHints(p provider.Provider) {
 	fmt.Println()
@@ -433,13 +496,16 @@ func printAvailableHints(p provider.Provider) {
 	fmt.Printf("查看全部子版本: jvm available %s -a  或  jvm available %s --major 21\n", p.Name(), p.Name())
 }
 
-// availableTable 是默认的表格输出 (每个大版本最新 GA)。--json 时输出同数据
-// 的 JSON (抑制进度行 / 缓存说明 / 安装提示), 缓存读写逻辑与人类模式完全一致。
+// availableTable 是默认的表格输出 (每个大版本最新 GA + 本地已装列)。--json 时
+// 输出同数据的 JSON (抑制进度行 / 缓存说明 / 安装提示), 缓存读写逻辑与人类模式
+// 完全一致。
 func availableTable(opts AvailableOptions, distro string) {
 	p, err := provider.Get(distro)
 	if err != nil {
 		app.Fail(err.Error())
 	}
+	// 本地已装标记渲染时现算 (缓存不含本地状态), 直查与缓存命中两条路径共用
+	installed := localInstalledIndex()
 	// 整表命中判据: 骨架表 (major+LTS) 命中且全部行的 LatestPatch 逐条缓存
 	// 命中 → 零网络直接出表; 任一 miss 走下方查询路径 (骨架重取一次轻量的
 	// Available, patch 由 patchOf 增量复用已命中的条目)。
@@ -455,6 +521,9 @@ func availableTable(opts AvailableOptions, distro string) {
 				rows[i].latest = latest
 			}
 			if hit {
+				for i := range rows {
+					rows[i].installed = installed.latestInstalled(distro, rows[i].major)
+				}
 				if opts.JSON {
 					app.PrintJSON(rowsToJSON(distro, p.DisplayName(), rows))
 					return
@@ -506,6 +575,11 @@ func availableTable(opts AvailableOptions, distro string) {
 		rows[i], rows[j] = rows[j], rows[i]
 	}
 
+	// 叠加本地已装标记 (现算, 不随骨架落缓存)
+	for i := range rows {
+		rows[i].installed = installed.latestInstalled(distro, rows[i].major)
+	}
+
 	// 骨架表整表落缓存 (骨架来自成功的 Available(), 无 failed 概念); 行内
 	// latest 已由 patchOf 按查询成败逐条落 Patches —— 两类数据分开, failed
 	// 行不再拖累整表 (原先"全部成功才落缓存"的判据随之废除)。
@@ -528,10 +602,13 @@ func availableGroups(opts AvailableOptions, distro string) {
 	if err != nil {
 		app.Fail(err.Error())
 	}
+	// 本地已装标记渲染时现算 (缓存不含本地状态), 缓存命中与直查两条路径共用
+	installed := localInstalledIndex()
 
 	// --major 单组: 缓存命中直接出 (跳过 Available 的存在性检查, TTL 内以缓存为准)
 	if !opts.Refresh && opts.Major > 0 {
 		if g, ok := loadGroupCache(distro, opts.Major); ok {
+			g.installed = installed.installedMembers(distro, opts.Major)
 			if opts.JSON {
 				app.PrintJSON(groupsToJSON(distro, p.DisplayName(), []versionGroup{g}))
 				return
@@ -612,6 +689,12 @@ func availableGroups(opts AvailableOptions, distro string) {
 			saveGroupCache(distro, g)
 		}
 	}
+
+	// 叠加本地已装标记 (现算, 不随分组条目落缓存), 缓存命中与直查的组一并覆盖
+	for i := range groups {
+		groups[i].installed = installed.installedMembers(distro, groups[i].major)
+	}
+
 	notice := ""
 	if len(missIdx) == 0 {
 		notice = cacheNoticeLine()
@@ -638,7 +721,8 @@ func sortIntsDesc(a []int) {
 	sort.Slice(a, func(i, j int) bool { return a[i] > a[j] })
 }
 
-// printAvailableGroups 按大版本分组打印全部子版本, 每组最新版标记 ← 最新。
+// printAvailableGroups 按大版本分组打印全部子版本, 每组最新版标记 ← 最新,
+// 已装的子版本行追加 (已装) 后缀 (最新且已装时两个标记并列)。
 func printAvailableGroups(groups []versionGroup, displayName string) {
 	fmt.Printf("可安装的大版本 (%s):\n", displayName)
 	fmt.Println()
@@ -658,32 +742,43 @@ func printAvailableGroups(groups []versionGroup, displayName string) {
 			fmt.Println()
 			continue
 		}
+		// 已装子版本集合 (行标记用): 组内可能装多个, 逐行对照远端子版本号
+		mark := map[string]bool{}
+		for _, v := range g.installed {
+			mark[v] = true
+		}
 		for i, v := range g.versions {
+			line := "  " + v
 			if i == 0 {
-				fmt.Printf("  %s  ← 最新\n", v)
-			} else {
-				fmt.Printf("  %s\n", v)
+				line += "  ← 最新"
 			}
+			if mark[v] {
+				line += " (已装)"
+			}
+			fmt.Println(line)
 		}
 		fmt.Printf("  (共 %d 个)\n", len(g.versions))
 		fmt.Println()
 	}
 }
 
-// printAvailableTable 以对齐的 ASCII 表格形式打印可安装版本。
-// 列宽按显示宽度 (runeWidth) 计算, 这样中文表头与 ASCII 版本号能正确对齐。
+// printAvailableTable 以对齐的 ASCII 表格形式打印可安装版本 (大版本/最新版本/
+// 类型/已装 四列)。列宽按显示宽度 (runeWidth) 计算, 这样中文表头与 ASCII
+// 版本号能正确对齐。
 func printAvailableTable(rows []availableRow, displayName string) {
-	// 三列的表头标题
+	// 四列的表头标题
 	const (
-		majorTitle  = "大版本"
-		latestTitle = "最新版本"
-		ltsTitle    = "类型"
+		majorTitle     = "大版本"
+		latestTitle    = "最新版本"
+		ltsTitle       = "类型"
+		installedTitle = "已装"
 	)
 
 	// 列宽 = max(所有单元格显示宽度, 表头显示宽度)
 	majorW := runeWidth(majorTitle)
 	latestW := runeWidth(latestTitle)
 	ltsW := runeWidth(ltsTitle)
+	installedW := runeWidth(installedTitle)
 	for _, r := range rows {
 		if w := runeWidth(itoa(r.major)); w > majorW {
 			majorW = w
@@ -702,13 +797,17 @@ func printAvailableTable(rows []availableRow, displayName string) {
 		if w := runeWidth(lts); w > ltsW {
 			ltsW = w
 		}
+		if w := runeWidth(installedCell(r.installed)); w > installedW {
+			installedW = w
+		}
 	}
 
 	// 用 + - | 画框, 兼容性最好 (任何控制台/字体都不会乱码)
 	border := func(left, mid, right string) string {
 		return left + strings.Repeat("-", majorW+2) + mid +
 			strings.Repeat("-", latestW+2) + mid +
-			strings.Repeat("-", ltsW+2) + right
+			strings.Repeat("-", ltsW+2) + mid +
+			strings.Repeat("-", installedW+2) + right
 	}
 	borderTop := border("+", "+", "+")
 	borderMid := border("+", "+", "+")
@@ -717,11 +816,12 @@ func printAvailableTable(rows []availableRow, displayName string) {
 	fmt.Printf("可安装的大版本 (%s):\n", displayName)
 	fmt.Println()
 	fmt.Println(borderTop)
-	// 表头行: 大版本 (靠右) | 最新版本 (靠左) | 类型 (居中)
-	fmt.Printf("| %s | %s | %s |\n",
+	// 表头行: 大版本 (靠右) | 最新版本 (靠左) | 类型 (居中) | 已装 (靠左)
+	fmt.Printf("| %s | %s | %s | %s |\n",
 		padLeft(majorTitle, majorW),
 		padRight(latestTitle, latestW),
 		padCenter(ltsTitle, ltsW),
+		padRight(installedTitle, installedW),
 	)
 	fmt.Println(borderMid)
 	for _, r := range rows {
@@ -733,13 +833,22 @@ func printAvailableTable(rows []availableRow, displayName string) {
 		if r.lts {
 			lts = "LTS"
 		}
-		fmt.Printf("| %s | %s | %s |\n",
+		fmt.Printf("| %s | %s | %s | %s |\n",
 			padLeft(itoa(r.major), majorW),
 			padRight(latest, latestW),
 			padCenter(lts, ltsW),
+			padRight(installedCell(r.installed), installedW),
 		)
 	}
 	fmt.Println(borderBot)
+}
+
+// installedCell 返回已装列的单元格文案: 本地最新已装版本号, 未装显示 "-"。
+func installedCell(v string) string {
+	if v == "" {
+		return "-"
+	}
+	return v
 }
 
 // itoa 是 strconv.Itoa 的别名, 避免引入 strconv (保持 cmd 包 import 精简)
