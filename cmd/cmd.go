@@ -80,10 +80,25 @@ func installFromZip(versionArg, zipPath string) {
 	}
 }
 
+// installCmd 拼出完整可复制的安装命令 ("jvm install <spec>"), spec 为完整的
+// [distro@]版本 串, 原样回显。use/exec/auto/pin 四处的安装引导共用本函数
+// (各处文案措辞不同, 但命令拼装单一出处, 见 installHint)。
+func installCmd(spec string) string {
+	return "jvm install " + spec
+}
+
+// installHint 返回版本未装错误的统一安装提示行: 换行 + 两空格缩进 +
+// "先安装: " 前缀的完整安装命令, 追加在错误原因之后。use/exec 共用,
+// 格式与 exec 既有提示一字不差。
+func installHint(distro, version string) string {
+	return "\n  先安装: " + installCmd(distro+"@"+version)
+}
+
 // Use 处理 jvm use <[distro@]版本号>
 // 无参数时从当前目录向上查找版本固定文件 (.jvmrc, 兼容 .java-version /
 // .tool-versions / .sdkmanrc, 见 internal/pinrc), 用其中指定的版本
 // (显式参数优先; 外来格式走宽松版本匹配, 见 rc.go)。
+// 版本未装时错误附统一的先安装提示 (与 exec 同款, 见 installHint)。
 func Use(arg string) {
 	if err := paths.EnsureDirs(); err != nil {
 		app.Fail(err.Error())
@@ -99,14 +114,9 @@ func Use(arg string) {
 	if err != nil {
 		app.Fail(err.Error())
 	}
-	var dir string
-	if loose {
-		dir, err = resolveVersionLoose(spec)
-	} else {
-		dir, err = junction.ResolveVersion(spec.Distro, spec.Version)
-	}
-	if err != nil {
-		app.Fail(err.Error())
+	dir, failMsg := resolveUseDir(spec, loose)
+	if failMsg != "" {
+		app.Fail(failMsg)
 	}
 	target := filepath.Join(paths.VersionsDir, dir)
 	display := junction.DisplayName(dir) // 归一化为 {distro}-{version} 展示
@@ -131,9 +141,11 @@ func Use(arg string) {
 // Pin 处理 jvm pin [版本号]: 把版本号写入当前目录的 .jvmrc。
 // 无参数时用当前 current 指向的版本 (转成 distro@version 形式)。
 // 只写文件, 不切换版本; 想立即生效再 jvm use。
+// 有参数时按 use 同规则校验本地已装: 未装打警告不阻断写入
+// (钉待装版本是合法场景, 如 CI 先 pin 后 install); 已装静默。
 func Pin(arg string) {
 	if arg == "" {
-		// 无参: 取当前 current 版本, 转成 distro@version 形式
+		// 无参: 取当前 current 版本, 转成 distro@version 形式 (必已装, 不校验)
 		t := junction.ReadTarget()
 		if t == "" {
 			app.Fail("当前没有选中任何版本, 先 jvm use <版本号>")
@@ -142,8 +154,15 @@ func Pin(arg string) {
 		arg = distro + "@" + ver
 	} else {
 		// 有参: 先校验是合法 spec, 不写脏文件
-		if _, err := app.ParseVersionSpec(arg); err != nil {
+		spec, err := app.ParseVersionSpec(arg)
+		if err != nil {
 			app.Fail("无效的版本号: " + err.Error())
+		}
+		// 未装校验 (与 use 同规则: 纯大版本取组内最新 / 完整版本精确),
+		// 失败只警告不阻断 —— .jvmrc 生效 (use) 前先装即可
+		if _, err := junction.ResolveVersion(spec.Distro, spec.Version); err != nil {
+			pinSpec := spec.Distro + "@" + spec.Version
+			fmt.Printf("注意: %s 未安装, .jvmrc 生效前需先 %s\n", pinSpec, installCmd(pinSpec))
 		}
 	}
 

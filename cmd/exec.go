@@ -83,16 +83,10 @@ func resolveExecDir(specArgs []string) string {
 	if err != nil {
 		app.Fail(err.Error())
 	}
-	if loose {
-		dir, err := resolveVersionLoose(spec)
-		if err != nil {
-			app.Fail(err.Error() + "\n  先安装: jvm install " + spec.Distro + "@" + spec.Version)
-		}
-		return dir
-	}
-	dir, err := junction.ResolveVersion(spec.Distro, spec.Version)
-	if err != nil {
-		app.Fail(err.Error() + "\n  先安装: jvm install " + spec.Distro + "@" + spec.Version)
+	// 解析与未装提示与 use 共用一条链路 (rc.go 的 resolveUseDir), 输出一致
+	dir, failMsg := resolveUseDir(spec, loose)
+	if failMsg != "" {
+		app.Fail(failMsg)
 	}
 	return dir
 }

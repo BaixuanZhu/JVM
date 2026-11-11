@@ -564,3 +564,87 @@ func TestAvailableMajorCacheHitInstalled(t *testing.T) {
 		t.Errorf("新装的 21.0.0+1 行应带 (已装) 标记:\n%s", out2)
 	}
 }
+
+// === 安装提示 helper (use/exec/auto/pin 共用) ===
+
+// TestInstallCmdAndHint 锁定安装命令与提示行的模板: 提示行格式以 exec
+// 既有文案为基准 (换行 + 两空格缩进 + "先安装: "), 一字不差。
+func TestInstallCmdAndHint(t *testing.T) {
+	tests := []struct {
+		name string
+		got  string
+		want string
+	}{
+		{"installCmd 完整 spec", installCmd("corretto@21"), "jvm install corretto@21"},
+		{"installCmd 裸版本 spec (auto 警告回显 rc 原样 spec)", installCmd("21"), "jvm install 21"},
+		{"installHint 完整版本", installHint("temurin", "25.0.1"), "\n  先安装: jvm install temurin@25.0.1"},
+		{"installHint 纯大版本", installHint("corretto", "21"), "\n  先安装: jvm install corretto@21"},
+	}
+	for _, tt := range tests {
+		if tt.got != tt.want {
+			t.Errorf("%s: got %q, want %q", tt.name, tt.got, tt.want)
+		}
+	}
+}
+
+// === Pin 有参的未装校验 (警告不阻断写入) ===
+
+// runPin 在临时 cwd 跑一次 Pin 并返回其全部 stdout 与写出的 .jvmrc 内容。
+func runPin(t *testing.T, arg string) (out, rcContent string) {
+	t.Helper()
+	dir := t.TempDir()
+	t.Chdir(dir)
+	out = captureStdout(t, func() { Pin(arg) })
+	b, err := os.ReadFile(filepath.Join(dir, ".jvmrc"))
+	if err != nil {
+		t.Fatalf("读取 .jvmrc: %v", err)
+	}
+	return out, string(b)
+}
+
+func TestPinUninstalledWarns(t *testing.T) {
+	root := withTempVersions(t)
+	if err := os.MkdirAll(filepath.Join(root, "versions", "temurin-21.0.5+11"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("未装版本: 警告 + 写入成功", func(t *testing.T) {
+		out, rc := runPin(t, "corretto@21")
+		if !strings.Contains(out, "注意: corretto@21 未安装, .jvmrc 生效前需先 jvm install corretto@21\n") {
+			t.Errorf("应有含安装命令的警告行, 实际输出:\n%s", out)
+		}
+		if !strings.Contains(rc, "corretto@21") {
+			t.Errorf("警告不阻断: .jvmrc 仍应写入 corretto@21, 实际:\n%s", rc)
+		}
+	})
+	t.Run("裸版本回显补全 distro", func(t *testing.T) {
+		// 输入不带 distro@ 前缀时警告用解析后的完整形式 (安装命令可直接复制)
+		out, _ := runPin(t, "17")
+		if !strings.Contains(out, "注意: temurin@17 未安装, .jvmrc 生效前需先 jvm install temurin@17\n") {
+			t.Errorf("裸版本警告应回显补全 distro 后的形式, 实际输出:\n%s", out)
+		}
+	})
+}
+
+func TestPinInstalledSilent(t *testing.T) {
+	root := withTempVersions(t)
+	if err := os.MkdirAll(filepath.Join(root, "versions", "temurin-21.0.5+11"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("已装版本: 无警告", func(t *testing.T) {
+		out, rc := runPin(t, "temurin@21")
+		if strings.Contains(out, "注意:") {
+			t.Errorf("已装版本不应有警告行, 实际输出:\n%s", out)
+		}
+		if !strings.Contains(rc, "temurin@21") {
+			t.Errorf(".jvmrc 应写入 temurin@21, 实际:\n%s", rc)
+		}
+	})
+	t.Run("已装完整版本: 无警告", func(t *testing.T) {
+		out, _ := runPin(t, "temurin@21.0.5+11")
+		if strings.Contains(out, "注意:") {
+			t.Errorf("已装完整版本不应有警告行, 实际输出:\n%s", out)
+		}
+	})
+}

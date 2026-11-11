@@ -1,4 +1,5 @@
-// rc_test.go 覆盖 rc.go 的宽松版本匹配 (外来 rc 格式的半截版本号降级)。
+// rc_test.go 覆盖 rc.go 的宽松版本匹配 (外来 rc 格式的半截版本号降级)
+// 与 use/exec 共用的版本解析入口 resolveUseDir (失败文案带统一安装提示)。
 package cmd
 
 import (
@@ -61,5 +62,78 @@ func TestResolveVersionLoose(t *testing.T) {
 				t.Errorf("错误文案应含 %q, got %q", tt.wantErr, err.Error())
 			}
 		})
+	}
+}
+
+// TestResolveUseDir 覆盖 use/exec 共用解析入口的成败分支: 成功返回目录名;
+// 失败文案 = junction 原错误 + 统一先安装提示 (installHint), 与 exec 既有
+// 输出同款 (use 的两条失败路径由此对齐)。
+func TestResolveUseDir(t *testing.T) {
+	root := withTempVersions(t)
+	// 已装: temurin 21 组一个 (跨组/跨发行版场景未装)
+	if err := os.MkdirAll(filepath.Join(root, "versions", "temurin-21.0.5+11"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name     string
+		spec     string
+		loose    bool
+		wantDir  string   // 期望目录名; "" 表示期望失败
+		wantMsgs []string // 失败文案应包含的片段 (wantDir 非空时忽略)
+	}{
+		{"严格命中完整版本", "temurin@21.0.5+11", false, "temurin-21.0.5+11", nil},
+		{"严格命中纯大版本", "temurin@21", false, "temurin-21.0.5+11", nil},
+		{"宽松命中半截版本", "temurin@21.0.2", true, "temurin-21.0.5+11", nil},
+		// use 显式参数失败: junction 错误 + 原始输入回显的先安装提示
+		{"严格未装: 错误+提示", "temurin@25.0.1", false, "",
+			[]string{"没有找到", "\n  先安装: jvm install temurin@25.0.1"}},
+		{"严格未装组: 错误+提示", "temurin@17", false, "",
+			[]string{"没有安装 temurin 大版本 17", "\n  先安装: jvm install temurin@17"}},
+		// use 无参外来 rc 宽松路径失败: 同样补提示 (对齐 exec 的 loose 分支)
+		{"宽松未装: 错误+提示", "temurin@25.0.2", true, "",
+			[]string{"没有找到", "\n  先安装: jvm install temurin@25.0.2"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			spec, err := app.ParseVersionSpec(tt.spec)
+			if err != nil {
+				t.Fatalf("ParseVersionSpec(%q): %v", tt.spec, err)
+			}
+			dir, failMsg := resolveUseDir(spec, tt.loose)
+			if tt.wantDir != "" {
+				if failMsg != "" {
+					t.Fatalf("resolveUseDir(%q) 意外失败: %s", tt.spec, failMsg)
+				}
+				if dir != tt.wantDir {
+					t.Errorf("resolveUseDir(%q) = %q, want %q", tt.spec, dir, tt.wantDir)
+				}
+				return
+			}
+			if failMsg == "" {
+				t.Fatalf("resolveUseDir(%q) 期望失败, got 目录 %q", tt.spec, dir)
+			}
+			for _, want := range tt.wantMsgs {
+				if !strings.Contains(failMsg, want) {
+					t.Errorf("失败文案应含 %q, 实际:\n%s", want, failMsg)
+				}
+			}
+		})
+	}
+}
+
+// TestResolveUseDirNoVersions 锁定「一台版本都没有」时的文案: junction 的
+// 既有安装引导保留原样, 提示行照常追加 (与 exec 行为一致)。
+func TestResolveUseDirNoVersions(t *testing.T) {
+	withTempVersions(t) // 空版本目录
+	spec, err := app.ParseVersionSpec("temurin@21")
+	if err != nil {
+		t.Fatalf("ParseVersionSpec: %v", err)
+	}
+	_, failMsg := resolveUseDir(spec, false)
+	for _, want := range []string{"还没有安装任何版本", "\n  先安装: jvm install temurin@21"} {
+		if !strings.Contains(failMsg, want) {
+			t.Errorf("失败文案应含 %q, 实际:\n%s", want, failMsg)
+		}
 	}
 }

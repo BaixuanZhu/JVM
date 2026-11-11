@@ -52,3 +52,20 @@ func resolveVersionLoose(spec app.VersionSpec) (string, error) {
 	}
 	return "", origErr
 }
+
+// resolveUseDir 把 use/exec 的版本参数解析到本地版本目录名: loose (外来
+// rc 格式来源) 走宽松匹配, 其余走严格解析。失败不直接退出, 而是返回拼好
+// 统一安装提示 (installHint) 的完整错误文案, 由调用方 Fail —— 既让
+// use 与 exec 的失败输出保持一字不差, 也便于表驱动测试断言提示行。
+func resolveUseDir(spec app.VersionSpec, loose bool) (dir, failMsg string) {
+	var err error
+	if loose {
+		dir, err = resolveVersionLoose(spec)
+	} else {
+		dir, err = junction.ResolveVersion(spec.Distro, spec.Version)
+	}
+	if err != nil {
+		return "", err.Error() + installHint(spec.Distro, spec.Version)
+	}
+	return dir, ""
+}

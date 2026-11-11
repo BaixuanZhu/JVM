@@ -92,7 +92,7 @@ func resolveRcVersion(spec string, src pinrc.Source, foundPath string) (dir, war
 	}
 	if err != nil {
 		name := filepath.Base(foundPath)
-		return "", fmt.Sprintf("%s 要求 %s, 未安装。运行 jvm install %s", name, spec, spec)
+		return "", fmt.Sprintf("%s 要求 %s, 未安装。运行 %s", name, spec, installCmd(spec))
 	}
 	return dir, ""
 }
