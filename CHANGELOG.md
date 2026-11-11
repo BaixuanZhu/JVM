@@ -7,6 +7,8 @@
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-11-11
+
 ### 新增
 
 - `jvm available` 标记本地已装版本：表格新增「已装」列（该发行版+大版本
@@ -495,7 +497,8 @@
 - SHA256 校验、zip-slip 防护、原子解压。
 - NSIS 安装包 + GitHub Actions 自动发布。
 
-[Unreleased]: https://github.com/BaixuanZhu/JVM/compare/v0.16.0...HEAD
+[Unreleased]: https://github.com/BaixuanZhu/JVM/compare/v0.17.0...HEAD
+[0.17.0]: https://github.com/BaixuanZhu/JVM/compare/v0.16.1...v0.17.0
 [0.16.1]: https://github.com/BaixuanZhu/JVM/compare/v0.16.0...v0.16.1
 [0.16.0]: https://github.com/BaixuanZhu/JVM/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/BaixuanZhu/jvm/compare/v0.14.0...v0.15.0
