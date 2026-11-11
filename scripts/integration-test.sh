@@ -211,11 +211,14 @@ expect "提示先安装" "先安装"
 # LatestPatch, 这个端点各发行版独立), 与 outdated 一样只断言稳定表头防上游抖动。
 run "14. available: 查询可安装大版本 (真实 API)" available
 expect "available 打印大版本表" "可安装的大版本"
+# 已装列只依赖本地安装状态 (步骤 2 已装 temurin 21), 不随上游抖动
+expect "available 表格含已装列" "已装"
 
 # available 结果缓存: 14 刚查过并落缓存, 二次调用应命中 (⚡ 说明行);
 # --refresh 绕过缓存强制直查 (无 ⚡ 行, 重新打 API)。
 run "14a. available 二次调用命中缓存" available
 expect "available 缓存命中说明" "缓存结果"
+expect "缓存命中路径仍显示已装列" "已装"
 run "14b. available --refresh 强制直查" available --refresh
 if echo "$LAST_OUT" | grep -q "缓存结果"; then
     echo "  ✗ --refresh 不应命中缓存" >&2
@@ -227,6 +230,11 @@ echo "  ✓ --refresh 绕过缓存"
 # 出现的表头与退出 0, 不断言具体分支 (防上游发新版导致用例抖动)。
 run "15. outdated: patch 升级检查" outdated
 expect "outdated 打印查询表头" "最新 patch"
+
+# outdated 结果缓存: 与 available 同一份 LatestPatch 逐条缓存, 15 刚查过已回填,
+# 二次调用应零网络命中 (说明行) —— 跨命令缓存复用的集成证据。
+run "15.2. outdated 二次调用命中缓存" outdated
+expect "outdated 缓存命中说明" "缓存结果"
 
 # --- jvm update: patch 升级闭环 (装新 → 切换 → 清理旧版, 顺带清旧 zip) ---
 # 步骤 2 已装 21 的最新 patch, 这里补装一个旧 patch: 既覆盖 update 的
@@ -528,6 +536,7 @@ expect "提示未知发行版" "未知"
 
 run_fail "37. use 未安装的大版本" use temurin@99
 expect "提示未安装" "没有安装"
+expect "提示先安装命令" "先安装"
 
 run_fail "38. uninstall 不存在的版本" uninstall temurin@99 -y
 expect "提示未找到" "没有"
