@@ -228,30 +228,61 @@ echo "  ✓ --refresh 绕过缓存"
 run "15. outdated: patch 升级检查" outdated
 expect "outdated 打印查询表头" "最新 patch"
 
-# --- jvm update: patch 升级闭环 (装新 → 切换 → 清理旧版) ---
-# 步骤 2 已装 21 的最新 patch, 这里补装一个旧 patch 并切过去, 再 update 回来。
-# 覆盖 "最新版已装 → Install 幂等跳过下载, 直接切换 + 删旧" 的编排路径
-# (全新下载链路由步骤 2 的 install 覆盖, 免去重复下载 ~200MB)。
-# 21.0.2+13 是 Adoptium 历史 GA, release_name 端点长期可查。
-run "15a. install temurin@21.0.2+13 (旧 patch, 供 update 升级)" install temurin@21.0.2+13
+# --- jvm update: patch 升级闭环 (装新 → 切换 → 清理旧版, 顺带清旧 zip) ---
+# 步骤 2 已装 21 的最新 patch, 这里补装一个旧 patch: 既覆盖 update 的
+# "最新版已装 → Install 幂等跳过下载, 直接切换 + 删旧" 编排路径 (全新下载
+# 链路由步骤 2 的 install 覆盖, 免去重复下载 ~200MB), 也串起缓存 zip 的
+# 生命周期联动 (cmd/cache_zip.go): uninstall -y 默认保留 → 重装命中缓存 →
+# update 顺带删旧 zip。21.0.2+13 是 Adoptium 历史 GA, release_name 端点
+# 长期可查。
+run "15a. install temurin@21.0.2+13 (旧 patch, 落缓存 zip)" install temurin@21.0.2+13
 expect "旧 patch 安装完成" "安装完成"
+
+# -y 跳过询问且默认保留缓存 zip (脚本路径的保守默认): zip 留存是下一步
+# "重装命中缓存" 的前提。
+run "15a2. uninstall 旧 patch -y: 默认保留缓存 zip" uninstall temurin@21.0.2+13 -y
+expect "已卸载" "已卸载"
+expect "缓存保留提示" "安装包缓存已保留"
+
+# 重装同版本: 上一步保留的缓存 zip 应命中 (零下载)
+run "15a3. install 重装: 命中保留的缓存 zip" install temurin@21.0.2+13
+expect "提示命中下载缓存" "命中下载缓存"
+
+# 趁 zip 还在 (下面的 update 会顺带删掉它), 拷出来充当 "手动下载的包" 供 15h
+cp "$JVM_HOME/cache/temurin-21.0.2+13.zip" "$JVM_HOME/manual-dl.zip"
 
 run "15b. use 切到旧 patch" use temurin@21.0.2+13
 expect "已切到旧 patch" "已切换"
 
-run "15c. update 21 -y: 最新版已装 → 跳过下载, 切换并清理旧版" update 21 -y
+run "15c. update 21 -y: 最新版已装 → 跳过下载, 切换并清理旧版 (含旧 zip)" update 21 -y
 expect "update 跳过下载" "跳过下载"
 expect "update 清理旧版本" "清理了"
 
 run "15d. current 验证已切到新版" current
 expect "current 为 temurin" "temurin"
+# 远端最新 patch 随上游漂移, 从 current 输出动态解析新版本号 (断言不写死)
+NEW_VER="$(printf '%s\n' "$LAST_OUT" | sed -n 's/^当前版本: temurin-\([0-9][0-9.+]*\)$/\1/p')"
+if [ -z "$NEW_VER" ]; then
+    echo "  ✗ 未能从 current 输出解析新版版本号" >&2
+    printf '%s\n' "$LAST_OUT" | sed 's/^/      /' >&2
+    exit 1
+fi
+echo "  ✓ 解析到新版版本号 $NEW_VER"
 
-echo "### 15e. 旧 patch 目录应已被 update 清理 ###"
+echo "### 15e. 旧 patch 的目录与缓存 zip 应已被 update 一并清理 ###"
 if [ -d "$JVM_HOME/versions/temurin-21.0.2+13" ]; then
     echo "  ✗ temurin-21.0.2+13 仍存在, update 未清理旧目录" >&2
     exit 1
 fi
-echo "  ✓ 旧目录已清理"
+if [ -f "$JVM_HOME/cache/temurin-21.0.2+13.zip" ]; then
+    echo "  ✗ 旧 patch 的缓存 zip 仍存在, update 未顺带清理" >&2
+    exit 1
+fi
+if [ ! -f "$JVM_HOME/cache/temurin-${NEW_VER}.zip" ]; then
+    echo "  ✗ 新版的缓存 zip 应留存 (回退/重装免下载)" >&2
+    exit 1
+fi
+echo "  ✓ 旧目录与旧 zip 已清理, 新版 zip 留存"
 
 run "15f. update 幂等: 已是最新" update 21 -y
 expect "提示已是最新" "已是最新"
@@ -263,23 +294,33 @@ expect "提示已是最新" "已是最新"
 run "15f2. update --all 幂等: 无落后组" update --all -y
 expect "update --all 汇总" "均为最新"
 
-# --- 下载缓存: 卸载重装免重新下载 ---
-# 15a 装过的 temurin-21.0.2+13 已被 update 清掉, 但缓存 zip 仍留存:
-# 重装同版本应命中缓存 (零下载), 再验证 cache 列表与 clean 闭环。
-run "15g. install temurin@21.0.2+13 重装 (命中缓存)" install temurin@21.0.2+13
-expect "提示命中下载缓存" "命中下载缓存"
+# --- 交互式 uninstall: 缓存 zip 询问 (不带 -y) ---
+# 管道里的 y 只够答第一问 (删除确认): confirm 每次调用新建 bufio reader,
+# 会把管道里的剩余内容整块吞进缓冲, 第二问 (缓存询问) 只能读到 EOF → 按
+# 默认 N 保留并打印提示。用 graalvm@21: 步骤 6e 装过、zip 在缓存, 且后续
+# 用例不再依赖它。
+echo "### 15g. 交互式 uninstall: 出现缓存询问, EOF 默认保留 ###"
+rc=0
+LAST_OUT="$(echo y | "$JVM" uninstall graalvm@21 2>&1)" || rc=$?
+if [ "$rc" -ne 0 ]; then
+    echo "  ✗ 命令退出 $rc" >&2
+    printf '%s\n' "$LAST_OUT" | sed 's/^/      /' >&2
+    exit 1
+fi
+expect "出现缓存 zip 询问" "是否同时删除缓存 zip"
+expect "EOF 默认保留提示" "安装包缓存已保留"
+if ls "$JVM_HOME/cache/"graalvm-*.zip >/dev/null 2>&1; then
+    echo "  ✓ graalvm 缓存 zip 已保留"
+else
+    echo "  ✗ graalvm 缓存 zip 应保留" >&2
+    exit 1
+fi
 
-run "15h. cache 列表含旧 patch zip" cache
-expect "列表非空" "temurin-21.0.2+13.zip"
-
-# 本地包安装: 缓存 zip 拷出来充当 "手动下载的包", 卸载后经双参数形式从本地重装 (零网络)。
-cp "$JVM_HOME/cache/temurin-21.0.2+13.zip" "$JVM_HOME/manual-dl.zip"
-run "15i. uninstall 为本地重装让位" uninstall temurin@21.0.2+13 -y
-expect "已卸载" "已卸载"
-
-run "15j. install 本地 zip (双参数形式)" install temurin@21.0.2+13 "$JVM_HOME/manual-dl.zip"
+# 本地包安装: 15a3 前拷出的缓存 zip 充当 "手动下载的包", 经双参数形式从本地
+# 重装 (零网络)。update 已把该版本目录清掉, 无需先卸载让位。
+run "15h. install 本地 zip (双参数形式)" install temurin@21.0.2+13 "$JVM_HOME/manual-dl.zip"
 expect "本地包安装提示" "从本地包安装"
-echo "### 15k. 本地安装目录已落位 ###"
+echo "### 15i. 本地安装目录已落位 ###"
 if [ -d "$JVM_HOME/versions/temurin-21.0.2+13" ]; then
     echo "  ✓ 目录已恢复"
 else
@@ -288,13 +329,14 @@ else
 fi
 rm -f "$JVM_HOME/manual-dl.zip"
 
-run "15l. uninstall 本地装的版本" uninstall temurin@21.0.2+13 -y
+# 本地包安装不落缓存, 此处无对应 zip → 不询问不提示, 只断言卸载本身
+run "15j. uninstall 本地装的版本" uninstall temurin@21.0.2+13 -y
 expect "已卸载" "已卸载"
 
-run "15m. cache clean 清空" cache clean
+run "15k. cache clean 清空" cache clean
 expect "clean 释放提示" "已清理"
 
-run "15n. cache 列表为空" cache
+run "15l. cache 列表为空" cache
 expect "空缓存提示" "空。"
 
 # --- jvm use --auto: .jvmrc 自动切换状态机 ---

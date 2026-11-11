@@ -123,6 +123,7 @@ func Install(asset *app.Asset, name string) error {
 	}
 
 	// 缓存文件以最终目录名命名: 镜像/官方双源内容一致 (校验和相同), 同键复用。
+	// cmd/cache_zip.go 的 cacheZipPath 按此约定反向定位 (卸载/升级联动清理缓存), 改命名须两处同步。
 	cacheFile := filepath.Join(paths.CacheDir, finalName+".zip")
 
 	if cacheHit(cacheFile, asset) {

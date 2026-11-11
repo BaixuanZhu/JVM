@@ -276,7 +276,8 @@ func printUpdatePlan(p updatePlan) {
 
 // execUpdatePlan 执行单组升级: 安装最新 patch (走 Resolve 正规链路, 与
 // jvm install <精确版本> 完全相同 —— LatestPatch 是轻量查询不保证填全下载字段)
-// → 条件切换 → 删旧目录。返回删除失败的目录列表 (宽容收集, 不算升级失败)。
+// → 条件切换 → 删旧目录 (目录删掉后顺带删对应缓存 zip, 见 removeCacheZipIfPresent)。
+// 返回删除失败的目录列表 (宽容收集, 不算升级失败)。
 func execUpdatePlan(p updatePlan, prov provider.Provider) ([]string, error) {
 	// 最新版已在组内 (outdated 信息过期或并列安装过) 则跳过下载直接清理。
 	if p.latestInstalled {
@@ -312,7 +313,12 @@ func execUpdatePlan(p updatePlan, prov provider.Provider) ([]string, error) {
 		if err := os.RemoveAll(filepath.Join(paths.VersionsDir, d)); err != nil {
 			fmt.Printf("删除 %s 失败 (可能被进程占用)\n", d)
 			failed = append(failed, d)
+			continue // 目录没删掉 (版本仍在), 其缓存 zip 一并保留
 		}
+		// 目录删掉后顺带清对应缓存 zip: update 语义下旧 patch 不会再装, zip 是
+		// 死重; 删除失败宽容 (removeCacheZipIfPresent 内提示指向 jvm cache
+		// clean), 不影响升级成败判定。新版 zip 天然留存 (下载即落缓存) 不动。
+		removeCacheZipIfPresent(d)
 	}
 	return failed, nil
 }

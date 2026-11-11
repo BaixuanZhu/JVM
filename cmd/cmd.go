@@ -931,6 +931,8 @@ func confirm(prompt string) bool {
 // Uninstall 处理 jvm uninstall <[distro@]版本号> [-a|--all] [-y|--yes]。
 // 默认在删除前要求确认, 加 -y/--yes 可跳过 (便于脚本调用)。
 // 删除正在使用的版本后自动回退到剩余最新已装版本 (current 不再悬空)。
+// 目录删除完成后若缓存里存在对应安装包 zip, 询问是否同时删除; -y 跳过询问
+// 且默认保留 (见 promptCacheCleanup)。
 // --all: 版本参数须为大版本号, 删除该 (发行版, 大版本) 组的全部已装版本。
 func Uninstall(args []string) {
 	versionArg, all, assumeYes, err := parseUninstallArgs(args)
@@ -989,6 +991,9 @@ func Uninstall(args []string) {
 	if wasCurrent {
 		fallbackAfterRemoval()
 	}
+	// 缓存 zip 去留是独立于版本删除的决定, 故放目录删除成功之后询问
+	// (版本目录要删是已确认过的); 无缓存 zip 时静默返回, 行为与从前一致。
+	promptCacheCleanup([]string{dir}, assumeYes)
 }
 
 // parseUninstallArgs 解析 jvm uninstall 的命令行参数:
@@ -1023,7 +1028,8 @@ func parseUninstallArgs(args []string) (versionArg string, all, assumeYes bool, 
 
 // uninstallGroup 删除 (发行版, 大版本) 组的全部已装版本目录 (uninstall --all):
 // 打印删除计划 (标注在用版本) → 一次确认 → 逐目录删除 (单个失败不阻断,
-// Windows 进程占用场景) → 在用版本被删后回退。存在删除失败时以非零码退出
+// Windows 进程占用场景) → 在用版本被删后回退 → 删除成功目录的缓存 zip 合并为
+// 一次询问 (见 promptCacheCleanup)。存在删除失败时以非零码退出
 // (与 update --all 的汇总模式一致)。
 func uninstallGroup(distro string, major int, assumeYes bool) {
 	names, _ := junction.ListLocal()
@@ -1060,16 +1066,23 @@ func uninstallGroup(distro string, major int, assumeYes bool) {
 	}
 
 	var failed []string
+	var removed []string
 	for _, d := range dirs {
 		fmt.Printf("正在删除 %s ...\n", d)
 		if err := os.RemoveAll(filepath.Join(paths.VersionsDir, d)); err != nil {
 			fmt.Printf("删除 %s 失败 (可能被进程占用)\n", d)
 			failed = append(failed, d)
+			continue
 		}
+		removed = append(removed, d)
 	}
 	if wasCurrent {
 		fallbackAfterRemoval()
 	}
+
+	// 缓存 zip 去留是独立决定, 放目录删除完成后: 只覆盖删除成功的目录 (失败
+	// 目录的版本仍在, 其 zip 语义未死), 一次询问覆盖全部 (含合计大小)。
+	promptCacheCleanup(removed, assumeYes)
 
 	if len(failed) > 0 {
 		fmt.Printf("%d 个版本未能删除, 可稍后重试 (jvm uninstall %s@%d --all)\n", len(failed), distro, major)
