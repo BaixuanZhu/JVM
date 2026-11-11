@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/backend/version-parsing.md", "reason": "outdated/update 的版本比较与 MajorOf/SplitDistro 分组口径依赖此单一事实源"}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "本任务核心是消除 outdated/update 复制块并抽共享查询层, 按此指南评估抽象边界"}

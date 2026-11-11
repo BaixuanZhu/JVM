@@ -1,0 +1,1 @@
+{"file": ".trellis/spec/backend/version-parsing.md", "reason": "pin/use 的 ResolveVersion 语义 (纯大版本 vs 精确匹配) 依此规范"}
