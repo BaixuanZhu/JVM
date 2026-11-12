@@ -1,0 +1,4 @@
+{"file": ".trellis/tasks/11-11-dragonwell-provider/research.md", "reason": "对照验收：解析规则与陷阱样本"}
+{"file": ".trellis/spec/backend/version-parsing.md", "reason": "检查 provider 是否违反版本串单一事实源约束"}
+{"file": ".trellis/spec/backend/query-cache.md", "reason": "检查 LatestPatch/缓存契约"}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "复用 app 助手而非新造轮子的检查视角"}

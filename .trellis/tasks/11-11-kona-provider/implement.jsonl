@@ -1,0 +1,3 @@
+{"file": ".trellis/tasks/11-11-kona-provider/research.md", "reason": "端点/命名/校验和实测事实与陷阱样本，解析规则的数据来源"}
+{"file": ".trellis/spec/backend/version-parsing.md", "reason": "Resolve 双分支路由与版本串助手单一事实源；禁止 provider 局部版本提取与比较器"}
+{"file": ".trellis/spec/backend/query-cache.md", "reason": "LatestPatch 统一查询入口与 available-cache 契约，provider 四入口须满足"}

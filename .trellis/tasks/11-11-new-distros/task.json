@@ -1,0 +1,30 @@
+{
+  "id": "new-distros",
+  "name": "new-distros",
+  "title": "新增发行版 provider：Dragonwell / Kona / Semeru（父任务）",
+  "description": "为 jvm 新增 Alibaba Dragonwell、Tencent Kona、IBM Semeru 三个发行版 provider，全部走官方 GitHub releases 端点；ARM64 下入口统一报错（沿用 corretto/graalvm 先例）；父任务负责跨子任务的补全 token、CHANGELOG、文档汇总与最终集成验收",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P1",
+  "creator": "zz",
+  "assignee": "zz",
+  "createdAt": "2026-11-11",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "11-11-semeru-provider",
+    "11-11-dragonwell-provider",
+    "11-11-kona-provider"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}
