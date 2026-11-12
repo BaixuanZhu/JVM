@@ -164,6 +164,57 @@ expect "EA 已卸载" "已卸载"
 run "6k. use 切回 temurin@21" use temurin@21
 expect "切回 temurin" "已切换"
 
+# --- 三发行版 GitHub releases provider (semeru/dragonwell/kona) ---
+# 元数据走 api.github.com (未认证 60 次/h/IP); CI runner 独立配额, 本块约 20 发, 远低于限额。
+# 本地手跑注意: 若本机配额被耗尽, available 的「最新版本」列会变 N/A, install 会 403。
+# kona 校验两源逐版本取最强: 21.0.11 命中官方索引 kona-v1.json → SHA256;
+#   最新版 (索引滞后 1~2 季度) → GitHub release 的 .md5 旁路 → MD5。
+#   若索引日后滚动把 21.0.11 挤出保留窗 (需 ≥8 个更新版本), 把此处换成当时仍在索引内的版本。
+run "6l. available semeru: 大版本表" available semeru
+expect "semeru 大版本表" "可安装的大版本"
+expect "semeru 21 行有具体版本号" "21.0."
+run "6m. available dragonwell: 大版本表" available dragonwell
+expect "dragonwell 大版本表" "可安装的大版本"
+expect "dragonwell 21 行有具体版本号" "21.0."
+run "6n. available kona: 大版本表" available kona
+expect "kona 大版本表" "可安装的大版本"
+expect "kona 21 行有具体版本号" "21.0."
+
+run "6o. install semeru@21 (SHA256, IBM GitHub releases)" install semeru@21
+expect "semeru 安装完成" "安装完成"
+expect "semeru 走 SHA256 校验" "校验 SHA256"
+run "6p. install dragonwell@21 (SHA256, Alibaba GitHub releases)" install dragonwell@21
+expect "dragonwell 安装完成" "安装完成"
+expect "dragonwell 走 SHA256 校验" "校验 SHA256"
+run "6q. install kona@21.0.11 (SHA256, 官方索引命中)" install kona@21.0.11
+expect "kona 21.0.11 安装完成" "安装完成"
+expect "kona 21.0.11 走 SHA256 校验" "校验 SHA256"
+run "6r. install kona@21 (MD5, 索引滞后走 .md5 旁路)" install kona@21
+expect "kona 最新版安装完成" "安装完成"
+expect "kona 最新版走 MD5 校验" "校验 MD5"
+
+run "6s. exec semeru@21 -- java -version (OpenJ9)" exec semeru@21 -- java -version
+expect "semeru 输出 OpenJ9" "OpenJ9"
+run "6t. exec dragonwell@21 -- java -version" exec dragonwell@21 -- java -version
+expect "dragonwell 输出 Dragonwell" "Dragonwell"
+run "6u. exec kona@21 -- java -version" exec kona@21 -- java -version
+expect "kona 输出 TencentKona" "TencentKona"
+
+# 五段版本目录名 (dragonwell-21.0.12.0.12+8) 过 junction 切换
+run "6v. use 切到 dragonwell (五段版本目录 junction)" use dragonwell@21
+expect "dragonwell 已切换" "已切换"
+run "6w. use 切回 temurin@21" use temurin@21
+expect "切回 temurin" "已切换"
+
+run "6x. uninstall kona@21.0.11" uninstall kona@21.0.11 -y
+expect "kona 21.0.11 已卸载" "已卸载"
+run "6y. uninstall kona@21" uninstall kona@21 -y
+expect "kona 最新版已卸载" "已卸载"
+run "6z. uninstall semeru@21" uninstall semeru@21 -y
+expect "semeru 已卸载" "已卸载"
+run "6za. uninstall dragonwell@21" uninstall dragonwell@21 -y
+expect "dragonwell 已卸载" "已卸载"
+
 # doctor 软检查: 关自举后 shell 集成/补全两项必 ✗ (预期内), 只验版本目录完整性。
 run "7. doctor (软检查)" doctor
 expect "doctor 版本目录完整性通过" "版本目录完整性"
