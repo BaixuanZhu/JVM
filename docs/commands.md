@@ -13,6 +13,9 @@ jvm install microsoft@21        # Microsoft Build of OpenJDK 21
 jvm install zulu@21             # Azul Zulu 21
 jvm install liberica@21         # BellSoft Liberica 21
 jvm install graalvm@21          # Oracle GraalVM 21 (CPU LTS line)
+jvm install dragonwell@21       # Alibaba Dragonwell 21 (Standard)
+jvm install kona@21             # Tencent Kona 21
+jvm install semeru@21           # IBM Semeru 21 (OpenJ9)
 jvm install temurin-ea@28       # Temurin 28 early access (pre-GA preview)
 jvm install 21.0.12+8           # exact Temurin version, build number included
 jvm install temurin@21.0.5+11 D:\jdk.zip   # from a local zip — no network at all

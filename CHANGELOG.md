@@ -7,6 +7,12 @@
 
 ## [Unreleased]
 
+### 新增
+
+- 新增三个发行版：`dragonwell`（Alibaba Dragonwell Standard）、`kona`（Tencent Kona）、`semeru`（IBM Semeru，OpenJ9 虚拟机），版本元数据与下载均走各发行版官方 GitHub releases；三家官方均无 Windows ARM64 构建，ARM64 环境下查询/安装统一提示改用 temurin/microsoft
+- Kona 完整性校验按官方供给逐版本取最强：官方索引（konajdk GitHub Pages，与 actions/setup-java 同源）命中的版本走 SHA256，索引滞后期的新版本按官方 `.md5` 旁路走 MD5；下载校验随之新增 MD5 算法支持
+
+
 ## [0.17.0] - 2026-11-11
 
 ### 新增

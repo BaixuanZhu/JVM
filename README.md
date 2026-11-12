@@ -2,7 +2,7 @@
 
 English | [简体中文](README.zh-CN.md)
 
-Install multiple JDKs, switch between them in milliseconds, no admin rights required. Temurin, Corretto, Microsoft, Zulu, Liberica, and GraalVM.
+Install multiple JDKs, switch between them in milliseconds, no admin rights required. Temurin, Corretto, Microsoft, Zulu, Liberica, GraalVM, Dragonwell, Kona, and Semeru.
 
 <!-- TODO: drop a 5s GIF here — `jvm use 21` then `java -version` changing in the same terminal.
      It converts better than everything else on this page combined. -->
@@ -73,6 +73,9 @@ The second half is harder. A child process cannot modify its parent shell's envi
 | Azul Zulu | `zulu` | Yes |
 | BellSoft Liberica | `liberica` | Yes |
 | Oracle GraalVM | `graalvm` | — |
+| Alibaba Dragonwell (Standard) | `dragonwell` | — |
+| Tencent Kona | `kona` | — |
+| IBM Semeru (OpenJ9) | `semeru` | — |
 
 Each vendor publishes a different API shape — indexmap JSON, two-step metadata queries, SHA1-only checksums, CDN probing. All of it is normalised behind a `Provider` interface in `internal/provider/`.
 
@@ -85,7 +88,7 @@ Each vendor publishes a different API shape — indexmap JSON, two-step metadata
 | Current-session effect | Shell wrapper injected on startup | A child process cannot touch the parent's environment |
 | `PATH` injection | `HKCU\Environment` + `WM_SETTINGCHANGE` | `setx` truncates long `PATH` values |
 | Download source | Tsinghua mirror first, official CDN fallback | Fast in mainland China, still correct if the mirror lags |
-| Distribution | Six vendors plus Temurin EA | All ship plain zips; no MSI installers to unpackage |
+| Distribution | Nine vendors plus Temurin EA | All ship plain zips; no MSI installers to unpackage |
 
 ## Build
 

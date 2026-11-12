@@ -2,7 +2,7 @@
 
 [English](README.md) | 简体中文
 
-装多个 JDK，切换以毫秒计，全程不需要管理员权限。支持 Temurin、Corretto、Microsoft、Zulu、Liberica、GraalVM。
+装多个 JDK，切换以毫秒计，全程不需要管理员权限。支持 Temurin、Corretto、Microsoft、Zulu、Liberica、GraalVM、Dragonwell、Kona、Semeru。
 
 <!-- 待补：5 秒 GIF，`jvm use 21` 之后同一个终端里 `java -version` 立刻变化。
      这一段的说服力超过本页其余所有内容的总和。 -->
@@ -73,8 +73,11 @@ junction 是 NTFS 的 reparse point，创建时不校验 `SeCreateSymbolicLinkPr
 | Azul Zulu | `zulu` | 有 |
 | BellSoft Liberica | `liberica` | 有 |
 | Oracle GraalVM | `graalvm` | 无 |
+| Alibaba Dragonwell（Standard） | `dragonwell` | 无 |
+| Tencent Kona | `kona` | 无 |
+| IBM Semeru（OpenJ9） | `semeru` | 无 |
 
-七家的下载 API 形态各不相同：indexmap JSON、两步元数据查询、只给 SHA1 的校验、需要 CDN 顺序探测才能拿到资产。这些差异统一收敛在 `internal/provider/` 的 `Provider` 接口之后。
+十家的下载 API 形态各不相同：indexmap JSON、两步元数据查询、只给 SHA1 的校验、需要 CDN 顺序探测才能拿到资产、GitHub releases 旁路校验。这些差异统一收敛在 `internal/provider/` 的 `Provider` 接口之后。
 
 ## 设计决策
 
@@ -85,7 +88,7 @@ junction 是 NTFS 的 reparse point，创建时不校验 `SeCreateSymbolicLinkPr
 | 当前终端生效 | 启动时注入 shell wrapper | 子进程改不了父进程环境 |
 | `PATH` 注入 | `HKCU\Environment` + 广播 `WM_SETTINGCHANGE` | `setx` 会截断长 `PATH` |
 | 下载源 | Temurin 走清华镜像，失败回退官方 CDN | 国内快，镜像滞后也不会错 |
-| 发行版 | 六家加 Temurin EA | 全部提供纯 zip，不必解包 MSI |
+| 发行版 | 九家加 Temurin EA | 全部提供纯 zip，不必解包 MSI |
 
 ## 构建
 

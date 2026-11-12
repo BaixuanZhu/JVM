@@ -44,6 +44,9 @@ upstream APIs — extend it, not provider-local tests:
 - Corretto: `8.452.09.1`, `21.0.12.8.1`, `26.0.2.10.1` (dotted, variable length)
 - Zulu: `8.0.452+9` (assembled from `java_version` array)
 - Liberica: `21.0.5+11`, **`8u504+1`** (JDK 8, dot-less)
+- Semeru: `21.0.13.0` (new 4-segment since 2026-04), `21.0.5+11_openj9-0.48.0` (legacy, `_openj9` tail omittable in Resolve), `8u402-b06_openj9-0.43.0` (JDK 8 legacy), `8.0.492.0`
+- Dragonwell: `21.0.12.0.12+8`, `25.0.4.0.4+7`, `11.0.32.28` (no build segment), `8.30.29`
+- Kona: `21.0.13.0.3` (5-segment since 2026-10), `17.0.4.1`, `11.0.33`, `8.0.28`
 - Microsoft: LTS only, dotted; GraalVM: 21/25, dotted; temurin-ea: `28+14-ea-beta`
 
 ## Gotchas
