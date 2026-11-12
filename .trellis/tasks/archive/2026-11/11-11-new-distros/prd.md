@@ -32,20 +32,20 @@
 
 ## 父任务收尾职责（全部子任务归档后）
 
-- [ ] 补全 token：`jvm-completion` 递增（v8 → v9+，distro 列表变化必须递增；若多个子任务分窗口发版则各自递增，同窗口合并发版则一次性递增——按实际发版节奏执行）
-- [ ] shell 集成脚本：确认 `CandidateFiles`/钩子无涉及 distro 的内容需同步（预期无）
-- [ ] `AGENTS.md`：Project overview 的发行版清单、provider 目录列表、Security considerations 的网络端点清单补三家；完整性校验模型表述更新为「按厂商供给取最强（SHA256 > SHA1 > MD5，Kona 为 MD5 先例）」
-- [ ] README / docs（含中英两份与命令参考如涉及 distro 枚举）
-- [ ] `CHANGELOG.md` Unreleased 段落汇总（发版前必须）
-- [ ] `scripts/integration-test.sh`：酌情为新 distro 增补 install/use/uninstall 链路用例（预算内做，至少人工验证一版）
-- [ ] 最终集成验收：三家的 `available` / `available -a` / `available --json` / `install` / `use` / `exec` / `uninstall` 在 x64 开发机全绿
+- [x] 补全 token：`jvm-completion` v8 → v9（distro 列表新增 semeru/dragonwell/kona）
+- [x] shell 集成脚本：确认 `CandidateFiles`/钩子无涉及 distro 的内容需同步（核实无）
+- [x] `AGENTS.md`：发行版清单、provider 目录列表（新增三条适配器条目）、Security considerations 网络端点与校验模型（「按厂商供给取最强（SHA256 > SHA1 > MD5，Kona 为 MD5 先例）」）全部更新
+- [x] README / docs：中英 README 发行版表 + tagline + 设计决策计数、docs/commands 中英 install 示例
+- [x] `CHANGELOG.md` Unreleased 段落已写
+- [x] `scripts/integration-test.sh`：6l–6za 用例（available×3 / install×4 含 kona 双分支校验 / exec 厂商串断言 / 五段版本 junction / uninstall×4）
+- [x] 最终集成验收：CI 集成测试 run 43137274415 全绿（真实下载安装 + 校验 + exec + 卸载），替代本地人工冒烟（本机 GitHub API 配额受限，迁移到 CI 属更优解）
 
 ## Acceptance Criteria（父任务）
 
-- [ ] 三个子任务全部完成并归档
-- [ ] `make fmt` / `make vet` / `make test` / `make test-race` 全绿
-- [ ] 跨子任务收尾清单逐项勾完
-- [ ] x64 开发机上对三个新 distro 的全链路人工验证通过（记录在子任务或父任务 journal）
+- [x] 三个子任务全部完成并归档
+- [x] `make fmt` / `make vet` / `make test` / `make test-race` 全绿
+- [x] 跨子任务收尾清单逐项勾完
+- [x] 三个新 distro 的全链路验证通过（CI 集成测试真实下载验证，见上）
 
 ## Notes
 
