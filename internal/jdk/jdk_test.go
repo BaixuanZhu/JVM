@@ -13,8 +13,8 @@ import (
 	"time"
 )
 
-// TestFileHash 验证 fileHash 按算法分流 (sha256/sha1)、空与未知算法回退 sha256、
-// 大小写/连字符容忍。用固定内容 "hello" 的已知哈希向量, 不触网。
+// TestFileHash 验证 fileHash 按算法分流 (sha256/sha1/md5)、空与未知算法回退
+// sha256、大小写/连字符容忍。用固定内容 "hello" 的已知哈希向量, 不触网。
 func TestFileHash(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "blob")
@@ -23,6 +23,7 @@ func TestFileHash(t *testing.T) {
 	}
 	const wantSHA256 = "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
 	const wantSHA1 = "aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d"
+	const wantMD5 = "5d41402abc4b2a76b9719d911017c592"
 
 	cases := []struct {
 		algo string
@@ -30,9 +31,11 @@ func TestFileHash(t *testing.T) {
 	}{
 		{"sha256", wantSHA256},
 		{"sha1", wantSHA1},
-		{"SHA-1", wantSHA1}, // 连字符 + 大小写容忍
-		{"", wantSHA256},    // 空默认 sha256
-		{"md5", wantSHA256}, // 未知算法回退 sha256
+		{"SHA-1", wantSHA1},     // 连字符 + 大小写容忍
+		{"", wantSHA256},        // 空默认 sha256
+		{"md5", wantMD5},        // kona 索引滞后期走 .md5 旁路
+		{"MD5-SUM", wantMD5},    // 大小写 + 连字符容忍
+		{"unknown", wantSHA256}, // 未知算法回退 sha256
 	}
 	for _, c := range cases {
 		got, err := fileHash(path, c.algo)

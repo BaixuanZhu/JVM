@@ -10,6 +10,7 @@ package jdk
 import (
 	"archive/zip"
 	"context"
+	"crypto/md5"
 	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/hex"
@@ -510,13 +511,17 @@ func (p *progressReader) Read(buf []byte) (int, error) {
 }
 
 // fileHash 计算文件的哈希 (十六进制小写), 按 algo 选择算法:
-// "sha1" (含 "sha-1") 用 SHA-1, 其余 (空串/"sha256"/未知) 一律用 SHA-256。
+// "sha1" (含 "sha-1") 用 SHA-1, "md5" 用 MD5, 其余 (空串/"sha256"/未知) 一律
+// 用 SHA-256。算法选择跟随厂商官方供给取最强 (liberica 仅 sha1、kona 索引
+// 滞后期仅 md5 的先例), 均强于无校验。
 // 流式读取, 不全量载入内存, 适合大 JDK zip。
 func fileHash(path, algo string) (string, error) {
 	var h hash.Hash
 	switch strings.ToLower(strings.TrimSpace(algo)) {
 	case "sha1", "sha-1":
 		h = sha1.New()
+	case "md5", "md5-sum":
+		h = md5.New()
 	default: // "" / "sha256" / 未知 → 一律 SHA-256
 		h = sha256.New()
 	}
