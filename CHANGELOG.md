@@ -7,6 +7,8 @@
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-11-12
+
 ### 新增
 
 - 新增三个发行版：`dragonwell`（Alibaba Dragonwell Standard）、`kona`（Tencent Kona）、`semeru`（IBM Semeru，OpenJ9 虚拟机），版本元数据与下载均走各发行版官方 GitHub releases；三家官方均无 Windows ARM64 构建，ARM64 环境下查询/安装统一提示改用 temurin/microsoft
@@ -504,6 +506,7 @@
 - NSIS 安装包 + GitHub Actions 自动发布。
 
 [Unreleased]: https://github.com/BaixuanZhu/JVM/compare/v0.17.0...HEAD
+[0.18.0]: https://github.com/BaixuanZhu/JVM/compare/v0.17.0...v0.18.0
 [0.17.0]: https://github.com/BaixuanZhu/JVM/compare/v0.16.1...v0.17.0
 [0.16.1]: https://github.com/BaixuanZhu/JVM/compare/v0.16.0...v0.16.1
 [0.16.0]: https://github.com/BaixuanZhu/JVM/compare/v0.15.0...v0.16.0
