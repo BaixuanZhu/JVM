@@ -1,5 +1,5 @@
 // Command jvm 是 Windows 上的 Java 版本管理器 (类似 nvm-windows / jabba)。
-// 支持 Temurin / Corretto / Microsoft / Zulu / Liberica / GraalVM 等发行版。
+// 支持 Temurin / Corretto / Microsoft / Zulu / Liberica / GraalVM / Dragonwell / Kona / Semeru 等发行版。
 //
 // 用法:
 //
@@ -38,7 +38,7 @@ import (
 
 func main() {
 	// 加载用户配置 (~/.jvm/config.toml 或环境变量), 把目标架构/镜像分发给
-	// 所有实现了 provider.Configurable 的适配器 (temurin/corretto/microsoft/zulu/liberica/graalvm)。
+	// 所有实现了 provider.Configurable 的适配器 (temurin/corretto/microsoft/zulu/liberica/graalvm/dragonwell/kona/semeru)。
 	// 必须在任何网络请求前完成, 故置于自举链路最前面。
 	cfg := config.Load()
 	provider.ConfigureAll(cfg.Arch, cfg.Mirror)

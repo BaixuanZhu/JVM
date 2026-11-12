@@ -56,7 +56,9 @@ const completionEndMarker = "# <<< jvm completion <<<"
 // v8: 只读命令 --json 补全 (available/doctor 加选项, list/outdated 新增分支);
 //
 //	cache clean 补 --older-than。
-const completionVersionToken = "# jvm-completion: v8"
+//
+// v9: distro 列表新增 semeru/dragonwell/kona 三个发行版。
+const completionVersionToken = "# jvm-completion: v9"
 
 // distroNames 从 provider 注册表提取所有发行版名 (provider.All 已字典序排序)。
 // 供补全脚本嵌入 distro@ 前缀和 available 参数补全。
