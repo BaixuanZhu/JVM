@@ -22,12 +22,15 @@ import (
 	"jvm/internal/junction"
 	"jvm/internal/paths"
 	"jvm/internal/provider"
-	_ "jvm/internal/provider/corretto"  // 注册 Amazon Corretto 适配器 (init 副作用)
-	_ "jvm/internal/provider/graalvm"   // 注册 Oracle GraalVM 适配器 (init 副作用)
-	_ "jvm/internal/provider/liberica"  // 注册 BellSoft Liberica 适配器 (init 副作用)
-	_ "jvm/internal/provider/microsoft" // 注册 Microsoft Build of OpenJDK 适配器 (init 副作用)
-	_ "jvm/internal/provider/temurin"   // 注册 Temurin (Adoptium) 适配器 (init 副作用)
-	_ "jvm/internal/provider/zulu"      // 注册 Azul Zulu 适配器 (init 副作用)
+	_ "jvm/internal/provider/corretto"   // 注册 Amazon Corretto 适配器 (init 副作用)
+	_ "jvm/internal/provider/dragonwell" // 注册 Alibaba Dragonwell 适配器 (init 副作用)
+	_ "jvm/internal/provider/graalvm"    // 注册 Oracle GraalVM 适配器 (init 副作用)
+	_ "jvm/internal/provider/kona"       // 注册 Tencent Kona 适配器 (init 副作用)
+	_ "jvm/internal/provider/liberica"   // 注册 BellSoft Liberica 适配器 (init 副作用)
+	_ "jvm/internal/provider/microsoft"  // 注册 Microsoft Build of OpenJDK 适配器 (init 副作用)
+	_ "jvm/internal/provider/semeru"     // 注册 IBM Semeru (OpenJ9) 适配器 (init 副作用)
+	_ "jvm/internal/provider/temurin"    // 注册 Temurin (Adoptium) 适配器 (init 副作用)
+	_ "jvm/internal/provider/zulu"       // 注册 Azul Zulu 适配器 (init 副作用)
 	"jvm/internal/shell"
 	"jvm/internal/updatecheck"
 	"jvm/internal/upgrade"
